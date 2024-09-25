@@ -431,6 +431,8 @@ real_vs_real <- check_haplotype(real_haplotypes = real_haplotypes, results = rea
 
 #####################################################################################
 ####                  Haplotype parent-of-origin assignments 
+
+#Route 1: use pedigree reconstruction and use both dam and sire pedigree ID to assign haplotype parental origins
 #####################################################################################
 
 #Need to make a flipping function first - haplotype 1 and 2 are not assigned parents 
@@ -1028,9 +1030,259 @@ colnames(Real_FLIP$real_results_flipped) <- colnames(real_haplotypes)
 real_vc_nGE_FLIP <- check_haplotype_postFlip(complete_haplotypes = Real_FLIP$real_results_flipped, results = nGE_phased_FLIP$results_flipped, pedigree = pedigree)
 real_vc_GE_FLIP <- check_haplotype_postFlip(complete_haplotypes = Real_FLIP$real_results_flipped, results = GE_phased_FLIP$results_flipped, pedigree = pedigree)
 
+#####################################################################################
+####                  Haplotype parent-of-origin assignments 
+
+#Route 2: DO NOT use pedigree reconstruction and use ONLY dam pedigree ID to assign haplotype parental origins
+#####################################################################################
+
+Route2_flipping <- function(Beagle_version = NULL, Data_type = NULL, pedigree = NULL, Real_haplotypes = NULL, method = NULL) {
+  
+  # First block: Real haplotypes case
+  if (Real_haplotypes == TRUE & Data_type == "Real" & Beagle_version == "Non") {
+    real_haplotypes <- real_haplotypes
+    map <- real_map
+    
+    real_results_methods <- list()
+    real_results_lengths <- list()
+    flipped_haplotypes <- list()
+    
+    for (i in 1:nrow(pedigree)) {
+      offspring_id <- pedigree$id[i]
+      mother_id <- pedigree$mother[i]
+      
+      offspring_row <- rownames(real_haplotypes)[sapply(rownames(real_haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% offspring_id]
+      offspring_haplotypes_i <- real_haplotypes[offspring_row,]
+      Offspring_Hap1 <- t(as.data.frame(offspring_haplotypes_i[1,]))
+      Offspring_Hap2 <- t(as.data.frame(offspring_haplotypes_i[2,]))
+      
+      mother_row <- rownames(real_haplotypes)[sapply(rownames(real_haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% mother_id]
+      mother_haplotypes_i <- real_haplotypes[mother_row,]
+      Maternal_Hap1 <- t(as.data.frame(mother_haplotypes_i[1,]))
+      rownames(Maternal_Hap1) <- mother_id
+      Maternal_Hap2 <- t(as.data.frame(mother_haplotypes_i[2,]))
+      rownames(Maternal_Hap2) <- mother_id
+      Maternal_Geno <- matrix(data = Maternal_Hap1 + Maternal_Hap2, nrow = 1)
+      colnames(Maternal_Geno) <- colnames(Maternal_Hap1)
+      rownames(Maternal_Geno) <- mother_id
+      
+      method_results <- list()
+      length_results <- list()
+      pat_results <- list()
+      mat_results <- list()
+      
+      for (j in unique(map[, 2])) {
+        print(x = c(i, j))
+        Chr_map <- map[map$chr == j, ]
+        Chr_markerNames <- Chr_map[, 1]
+        
+        Offspring_Hap1_chr <- Offspring_Hap1[, colnames(Offspring_Hap1) %in% Chr_markerNames, drop = FALSE]
+        Offspring_Hap2_chr <- Offspring_Hap2[, colnames(Offspring_Hap2) %in% Chr_markerNames, drop = FALSE]
+        Maternal_Geno_chr <- Maternal_Geno[, colnames(Maternal_Geno) %in% Chr_markerNames, drop = FALSE]
+        
+        scores_h1_m <- weighing_haplotypes(Offspring_Hap1_chr, Maternal_Geno_chr, method = method, j = j)
+        scores_h2_m <- weighing_haplotypes(Offspring_Hap2_chr, Maternal_Geno_chr, method = method, j = j)
+        
+        # Combine scores for this method
+        scores <- rbind(scores_h1_m, scores_h2_m)
+        scores$Parent <- c("h1_m", "h2_m")
+        
+        # Check logic
+        score_1 <- scores_h1_m$false_score
+        score_2 <- scores_h2_m$false_score
+        
+        abs_diff <- abs(c(score_1, score_2))
+        max_diff <- max(abs_diff)
+        
+        if (max_diff == abs(score_1) & max_diff != abs(score_2)) {
+          message("Hap1 is maternal - assume Hap2 is paternal")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        if (max_diff == abs(score_2) & max_diff != abs(score_1)) {
+          message("Hap2 is maternal - assume Hap1 is paternal")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        if (max_diff == abs(score_1) & max_diff == abs(score_2)) {
+          stop("Both haplotypes are assumed to be maternal")
+        }
+        
+        merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
+        identified_dpc_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
+        identified_maternal_haplo <- grep("_maternal$", rownames(merged_haps), value = TRUE)
+        
+        dpc_assigned <- merged_haps[identified_dpc_haplo, , drop = FALSE]
+        maternal_assigned <- merged_haps[identified_maternal_haplo, , drop = FALSE]
+        
+        pat_results[[j]] <- as.data.frame(dpc_assigned)
+        mat_results[[j]] <- as.data.frame(maternal_assigned)
+        
+        # Combine all scores into one data frame
+        testing_methods <- do.call(rbind, scores)
+        
+        lengths_h1_m <- check_dist(Offspring_Hap1_chr, Maternal_Geno_chr, j = j)
+        lengths_h1_m$Parent <- rep("h1_m")
+        lengths_h2_m <- check_dist(Offspring_Hap2_chr, Maternal_Geno_chr, j = j)
+        lengths_h2_m$Parent <- rep("h2_m")
+        
+        lengths_all <- rbind(lengths_h1_m, lengths_h2_m)
+        
+        method_results[[j]] <- as.data.frame(testing_methods)
+        length_results[[j]] <- as.data.frame(lengths_all)
+      }
+      
+      real_results_methods[[i]] <- do.call(rbind, method_results)
+      real_results_lengths[[i]] <- do.call(rbind, length_results)
+      
+      pat_results <- do.call(cbind, pat_results)
+      mat_results <- do.call(cbind, mat_results)
+      results <- rbind(mat_results, pat_results)
+      flipped_haplotypes[[i]] <- as.data.frame(results)
+    }
+    
+    real_results_methods_all <- do.call(rbind, real_results_methods)
+    real_results_lengths_all <- do.call(rbind, real_results_lengths)
+    real_results_flipped <- do.call(rbind, flipped_haplotypes)
+    
+    results <- list(real_results_methods_all = real_results_methods_all, real_results_lengths_all = real_results_lengths_all,
+                    real_results_flipped = real_results_flipped)
+  }
+  
+  # Second block: Phased haplotypes case
+  if (Real_haplotypes == FALSE) {
+    phased_results_methods <- list()
+    phased_results_lengths <- list()
+    flipped_haplotypes <- list()
+    
+    if (Data_type == "Pre_nGE_nQC" & Beagle_version == "Non") {
+      haplotypes <- nGE_nQC_nPhased_haplotypes
+      map <- nGE_nQC_nPhased_map
+    } else if (Data_type == "Pre_GE_nQC" & Beagle_version == "Non") {
+      haplotypes <- GE4.0
+      map <- GE_nQC_nPhased_map
+    } else if (Data_type == "Phased_nGE" & Beagle_version == "4.0") {
+      haplotypes <- nGE4.0_phasedhaplotypes
+      map <- nGE_phased_map
+    } else if (Data_type == "Phased_GE" & Beagle_version == "4.0") {
+      haplotypes <- GE4.0_phasedhaplotypes
+      map <- GE_phased_map
+    } else if (Data_type == "Phased_nGE" & Beagle_version == "4.1") {
+      haplotypes <- nGE4.1_phasedhaplotypes
+      map <- nGE_phased_map
+    }
+    
+    for (i in 1:nrow(pedigree)) {
+      offspring_id <- pedigree$id[i]
+      mother_id <- pedigree$mother[i]
+      
+      offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% offspring_id]
+      offspring_haplotypes_i <- haplotypes[offspring_row, ]
+      Offspring_Hap1 <- t(as.data.frame(offspring_haplotypes_i[1, ]))
+      Offspring_Hap2 <- t(as.data.frame(offspring_haplotypes_i[2, ]))
+      
+      mother_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% mother_id]
+      mother_haplotypes_i <- haplotypes[mother_row, ]
+      Maternal_Hap1 <- t(as.data.frame(mother_haplotypes_i[1, ]))
+      rownames(Maternal_Hap1) <- mother_id
+      Maternal_Hap2 <- t(as.data.frame(mother_haplotypes_i[2, ]))
+      rownames(Maternal_Hap2) <- mother_id
+      Maternal_Geno <- matrix(data = Maternal_Hap1 + Maternal_Hap2, nrow = 1)
+      colnames(Maternal_Geno) <- colnames(Maternal_Hap1)
+      rownames(Maternal_Geno) <- mother_id
+      
+      method_results <- list()
+      length_results <- list()
+      pat_results <- list()
+      mat_results <- list()
+      
+      for (j in unique(map[, 1])) {
+        print(x = c(i, j))
+        Chr_map <- map[map[,1] == j, ]
+        Chr_markerNames <- Chr_map[, 2]
+        
+        Offspring_Hap1_chr <- Offspring_Hap1[, colnames(Offspring_Hap1) %in% Chr_markerNames, drop = FALSE]
+        Offspring_Hap2_chr <- Offspring_Hap2[, colnames(Offspring_Hap2) %in% Chr_markerNames, drop = FALSE]
+        Maternal_Geno_chr <- Maternal_Geno[, colnames(Maternal_Geno) %in% Chr_markerNames, drop = FALSE]
+        
+        scores_h1_m <- weighing_haplotypes(Offspring_Hap1_chr, Maternal_Geno_chr, method = method, j = j)
+        scores_h2_m <- weighing_haplotypes(Offspring_Hap2_chr, Maternal_Geno_chr, method = method, j = j)
+        
+        scores <- rbind(scores_h1_m, scores_h2_m)
+        scores$Parent <- c("h1_m", "h2_m")
+        
+        score_1 <- scores_h1_m$false_score
+        score_2 <- scores_h2_m$false_score
+        
+        abs_diff <- abs(c(score_1, score_2))
+        max_diff <- max(abs_diff)
+        
+        if (max_diff == abs(score_1) & max_diff != abs(score_2)) {
+          message("Hap1 is maternal - assume Hap2 is paternal")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        if (max_diff == abs(score_2) & max_diff != abs(score_1)) {
+          message("Hap2 is maternal - assume Hap1 is paternal")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        if (max_diff == abs(score_1) & max_diff == abs(score_2)) {
+          stop("Both haplotypes are assumed to be maternal")
+        }
+        
+        merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
+        identified_dpc_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
+        identified_maternal_haplo <- grep("_maternal$", rownames(merged_haps), value = TRUE)
+        
+        dpc_assigned <- merged_haps[identified_dpc_haplo, , drop = FALSE]
+        maternal_assigned <- merged_haps[identified_maternal_haplo, , drop = FALSE]
+        
+        pat_results[[j]] <- as.data.frame(dpc_assigned)
+        mat_results[[j]] <- as.data.frame(maternal_assigned)
+        
+        testing_methods <- do.call(rbind, scores)
+        
+        lengths_h1_m <- check_dist(Offspring_Hap1_chr, Maternal_Geno_chr, j = j)
+        lengths_h1_m$Parent <- rep("h1_m")
+        lengths_h2_m <- check_dist(Offspring_Hap2_chr, Maternal_Geno_chr, j = j)
+        lengths_h2_m$Parent <- rep("h2_m")
+        
+        lengths_all <- rbind(lengths_h1_m, lengths_h2_m)
+        
+        method_results[[j]] <- as.data.frame(testing_methods)
+        length_results[[j]] <- as.data.frame(lengths_all)
+      }
+      
+      phased_results_methods[[i]] <- do.call(rbind, method_results)
+      phased_results_lengths[[i]] <- do.call(rbind, length_results)
+      
+      pat_results <- do.call(cbind, pat_results)
+      mat_results <- do.call(cbind, mat_results)
+      results <- rbind(mat_results, pat_results)
+      flipped_haplotypes[[i]] <- as.data.frame(results)
+    }
+    
+    phased_results_methods_all <- do.call(rbind, phased_results_methods)
+    phased_results_lengths_all <- do.call(rbind, phased_results_lengths)
+    phased_results_flipped <- do.call(rbind, flipped_haplotypes)
+    
+    results <- list(phased_results_methods_all = phased_results_methods_all,
+                    phased_results_lengths_all = phased_results_lengths_all,
+                    phased_results_flipped = phased_results_flipped)
+  }
+  
+  return(results)
+}
+
+
+Real_FLIP_R2 <- Route2_flipping(Beagle_version = "Non", Real_haplotypes = TRUE, Data_type = "Real", pedigree = pedigree, method = "power_mean")
+GE_phased_FLIP_R2 <- Route2_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_GE", pedigree = pedigree, method = "power_mean")
+nGE_phased_FLIP_R2 <- Route2_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_nGE", pedigree = pedigree, method = "power_mean")
+
 
 #####################################################################################
-####                  Gametic/Haplotype Mendelian sampling 
+####                  Gametic/Haplotype Mendelian sampling for Route 1
 # gi,1 = 1/2gm(i),1 + 1/2gm(i),2 + ri,1
 # gi,2 = 1/2gf(i),1 + 1/2gf(i),2 + ri,2
 #####################################################################################
@@ -1234,6 +1486,171 @@ Plotting_Gametic(df = Gametic_df, phased_type = c("True", "Phased_nGE", "Phased_
 Plotting_Gametic(df = Gametic_Slov, phased_type = c("Real"), plotting_styles = c("density", "histogram"))
 Plotting_Gametic(df = Gametic_nGE_phased, phased_type = c("Phased_nGE"), plotting_styles = c("density", "histogram"))
 
+#####################################################################################
+####                  Gametic/Haplotype Mendelian sampling for Route 2
+#####################################################################################
+calculate_gametic_relatedness_R2 <- function(sorted_offspring_haplotypes, all_haplotypes, pedigree) {
+  # Initialize an empty data frame to store results
+  gametic_results <- data.frame(
+    Offspring_ID = character(),
+    Mother_ID = character(),
+    Maternal_Mendelian = numeric(),
+    stringsAsFactors = FALSE
+  )
+  
+  cols <- colnames(sorted_offspring_haplotypes)
+  all_haplotypes_cols <- all_haplotypes[, cols, drop = FALSE]
+  
+  # Loop through each offspring in the pedigree file
+  for (i in 1:nrow(pedigree)) {
+    offspring_id <- pedigree$id[i]
+    mother_id <- pedigree$mother[i]
+    
+    #pull out the offspring maternal and paternal genotypes 
+    offspring_maternal <- rownames(sorted_offspring_haplotypes)[grep(paste0(offspring_id, "_maternal"), rownames(sorted_offspring_haplotypes))]
+    offspring_maternal <- sorted_offspring_haplotypes[offspring_maternal, , drop = FALSE]
+    
+    # Separate parents into Haplotype 1 and Haplotype 2
+    mother_row <- rownames(all_haplotypes_cols)[sapply(rownames(all_haplotypes_cols), function(x) strsplit(x,'_')[[1]][1]) %in% mother_id]
+    mother_haplotypes_i <- all_haplotypes_cols[mother_row,]
+    Maternal_Hap1 <- as.numeric(mother_haplotypes_i[1,])
+    Maternal_Hap2 <- as.numeric(mother_haplotypes_i[2,])
+    
+    # Calculate parental average and Mendelian sampling for each haplotype
+    ma_hap <- 0.5 * (Maternal_Hap1 + Maternal_Hap2)
+    ri_hap1 <- offspring_maternal - ma_hap
+    ri_hap1_sum <- sum(ri_hap1)
+    
+    # Add the values to the results data frame
+    gametic_results <- rbind(gametic_results, data.frame(
+      Offspring_ID = offspring_id,
+      Mother_ID = mother_id,
+      Maternal_Mendelian = ri_hap1_sum,
+      stringsAsFactors = FALSE
+    ))
+  }
+  
+  return(gametic_results)
+}
+
+Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Real_FLIP_R2$real_results_flipped , all_haplotypes = real_haplotypes, pedigree = pedigree)
+Gametic_TRUE$Phasing <- "True"
+
+Gametic_nGE_phased <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = nGE_phased_FLIP_R2$phased_results_flipped, all_haplotypes = nGE4.0_phasedhaplotypes, pedigree = pedigree)
+Gametic_nGE_phased$Phasing <- "Phased_nGE"
+
+Gametic_GE_phased <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = GE_phased_FLIP_R2$phased_results_flipped, all_haplotypes = GE4.0_phasedhaplotypes, pedigree = pedigree)
+Gametic_GE_phased$Phasing <- "Phased_GE"
+
+library(ggplot2)
+library(cowplot)
+
+Plotting_Gametic_R2 <- function(df, phased_type, plotting_styles) {
+  # Ensure the phased_type is valid
+  if (!all(phased_type %in% c("Phased_GE", "Phased_nGE",  "Pre_Phased_nGE", "Pre_Phased_GE","True", "Real"))) {
+    stop("Invalid phased_type. Choose either 'Phased_GE', 'Phased_nGE',  'Pre_Phased_nGE', 'Pre_Phased_GE', 'True' or 'Real'.")
+  }
+  
+  # Ensure the plotting_styles are valid
+  valid_styles <- c("histogram", "density", "scatter")
+  if (!all(plotting_styles %in% valid_styles)) {
+    stop("Invalid plotting_styles. Choose either 'histogram', 'density', or 'scatter'.")
+  }
+  
+  # Define color and fill scales for consistency
+  color_scale <- scale_color_manual(name = "Assigned parent haplotype",
+                                    values = c("Maternal" = "blue"),
+                                    labels = c("Maternal"))
+  fill_scale <- scale_fill_manual(name = "Assigned parent haplotype",
+                                  values = c("Maternal" = "blue"),
+                                  labels = c("Maternal"))
+  
+  # Initialize an empty list to store plots
+  plots <- list()
+  
+  # Generate plots for each phased_type
+  for (phase in phased_type) {
+    # Initialize list to store plots for current phased_type
+    phase_plots <- list()
+    
+    # Generate plots for each plotting_style
+    for (style in plotting_styles) {
+      if (style == "histogram") {
+        p <- ggplot(df[df$Phasing == phase, ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
+          geom_histogram(aes(y = ..count..), binwidth = 1, alpha = 0.7, position = 'identity') +
+          labs(title = paste(phase),
+               x = "Mendelian Sampling", y = "Count") +
+          theme_minimal() +
+          theme(strip.text = element_blank(),
+                plot.title = element_text(size = 20),
+                axis.title.x = element_text(size = 16),
+                axis.title.y = element_text(size = 16),
+                axis.text = element_text(size = 14),
+                legend.position = "none") +  # Remove legend from individual plots
+          fill_scale +  # Apply fill scale
+          facet_wrap(~ Phasing, ncol = 1)  # Separate plots by Phasing type
+        
+      } else if (style == "density") {
+        p <- ggplot(df[df$Phasing == phase, ], aes(x = Maternal_Mendelian, color = "Maternal")) +
+          geom_density(aes(y = ..scaled..), alpha = 0.7) +
+          labs(title = paste(phase),
+               x = "Mendelian Sampling", y = "Density") +
+          theme_minimal() +
+          theme(strip.text = element_blank(),
+                plot.title = element_text(size = 20),
+                axis.title.x = element_text(size = 16),
+                axis.title.y = element_text(size = 16),
+                axis.text = element_text(size = 14),
+                legend.position = "none") +  # Remove legend from individual plots
+          color_scale +  # Apply color scale
+          facet_wrap(~ Phasing, ncol = 1)  # Separate plots by Phasing type
+        
+      }
+      # Add plot to current phased_type plots list
+      phase_plots[[style]] <- p
+    }
+    
+    # Combine plots for the current phased_type into a single row
+    phase_plots_combined <- do.call(cowplot::plot_grid, c(phase_plots, list(nrow = 1)))
+    
+    # Add combined plots to the main plots list
+    plots[[phase]] <- phase_plots_combined
+  }
+  
+  # Combine all phased_type plots into a single row
+  combined_plots <- do.call(cowplot::plot_grid, c(plots, list(nrow = 1)))
+  
+  # Add legend only if "Phased_GE" is in the phased_type
+  if ("Phased_GE" %in% phased_type) {
+    # Create a plot to extract the legend from
+    legend_plot <- ggplot(df[df$Phasing == "Phased_GE", ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
+      geom_histogram(aes(y = ..count..), binwidth = 1, alpha = 0.7, position = 'identity') +
+      fill_scale +  # Apply fill scale
+      theme_minimal() +
+      theme(legend.position = "right",
+            legend.title = element_text(size = 16),   # Increase legend title font size
+            legend.text = element_text(size = 14))   # Increase legend text font size
+    
+    # Extract legend using get_legend from cowplot
+    legend <- cowplot::get_legend(legend_plot)
+    
+    # Combine plots and legend
+    combined_plots_with_legend <- plot_grid(
+      combined_plots,
+      legend,
+      ncol = 2,
+      rel_widths = c(4, 1)  # Adjust widths as needed
+    )
+  } else {
+    # Print combined plots without a legend
+    combined_plots_with_legend <- combined_plots
+  }
+  
+  # Print the combined plots with or without the legend
+  print(combined_plots_with_legend)
+}
+
+Plotting_Gametic_R2(df = Gametic_df, phased_type = c("True", "Phased_nGE", "Phased_GE"), plotting_styles = c("density"))
 
 
 #####################################################################################
