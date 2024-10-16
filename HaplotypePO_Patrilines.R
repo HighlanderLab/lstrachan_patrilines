@@ -8,6 +8,7 @@ library(AlphaSimR)
 library(ggplot2)
 library(dplyr)
 library(VariantAnnotation)
+library(vcfR)
 
 ############################################################################
 ########   GENERIC FUNCTIONS
@@ -340,16 +341,35 @@ rownames(nGE4.0_phasedhaplotypes) <- rownames(nGE_haplotypes)
 GE4.0_phasedhaplotypes <- apply(GE_haplotypes, 2, convert_genotypes)
 rownames(GE4.0_phasedhaplotypes) <- rownames(GE_haplotypes)
 
+GE_phased_map <- read.table("GE_QC_prePhase.map")
+nGE_phased_map <- read.table("nGE_QC_prePhase.map")
+
 ####################################################################################
 # Get the true haplotypes
 #####################################################################################
-setwd("~/Desktop/Slovenia data/Attempt2/Nested/General Data")
-pedigree <- read.csv("worker_pedigree.csv")
-load("~/Desktop/Slovenia data/Attempt2/Nested/General Data/SP_object.Rdata")
-load("~/Desktop/Slovenia data/Attempt2/Nested/General Data/Pop_withNoFathers.Rdata")
+setwd("~/Desktop/Slovenia data/Test_simulated")
+load("~/Desktop/Slovenia data/Test_simulated/Pop_withFathers.Rdata")
+load("~/Desktop/Slovenia data/Test_simulated/SP_object.Rdata")
+load("~/Desktop/Slovenia data/Test_simulated/Pop_withNoFathers.Rdata")
 ##### ALPHASIMR FORMAT Real haplotypes #####
 real_haplotypes <- pullSnpHaplo(PopMerged_noFathers)
 real_map <- getGenMap(SP)
+
+####################################################################################
+# Get the Slovenian data haplotypes
+#####################################################################################
+setwd("~/Desktop/Slovenia data/PLINK/Slov/Slov_Raw")
+Slov_map <-  read.table("SlovRaw.map")
+setwd("~/Desktop/Slovenia data/PLINK/Phasing/beagle4.0_phased/Slov")
+Slov_vcf <- read.vcfR("Slov4.0_phased.vcf")
+Slov_geno <- Slov_vcf@gt
+
+Slov_mothers <- read.table("~/Desktop/Slovenia data/Attempt2/Slov/Not-phased/Colony/data/KnownMothers.txt")
+Slov_sire <- read.table("~/Desktop/Slovenia data/PLINK/Slov/Slov AlphaAssign/output/Slov_AlphaAssignOutput.sires")
+#ped order is always mum/dpc/workers
+Slov_ids_all <- c(unique(Slov_mothers$V2), unique(Slov_sire$candidate), unique(Slov_mothers$V1))
+Slov_ind_id_1 <- paste(ids_all, "1", sep = "_")
+Slov_ind_id_2 <- paste(ids_all, "2", sep = "_")
 
 
 #####################################################################################
@@ -559,7 +579,7 @@ check_dist <- function(off_hap, par_geno, j){
   return(runs_df)
 }
 
-TRUE_FALSE_flipping <- function(Beagle_version = NULL, Data_type = NULL, pedigree = NULL, Real_haplotypes = NULL, method = NULL){
+Route1_flipping <- function(Beagle_version = NULL, Data_type = NULL, pedigree = NULL, Real_haplotypes = NULL, method = NULL){
   
   
   if (Real_haplotypes == TRUE & Data_type == "Real" & Beagle_version == "Non"){
@@ -961,10 +981,11 @@ TRUE_FALSE_flipping <- function(Beagle_version = NULL, Data_type = NULL, pedigre
   return(results)
 }
 
-Real_FLIP <- TRUE_FALSE_flipping(Beagle_version = "Non", Real_haplotypes = TRUE, Data_type = "Real", pedigree = pedigree, method = "power_mean")
-GE_phased_FLIP <- TRUE_FALSE_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_GE", pedigree = pedigree, method = "power_mean")
-nGE_phased_FLIP <- TRUE_FALSE_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_nGE", pedigree = pedigree, method = "power_mean")
-Slov_FLIP <- TRUE_FALSE_flipping(Beagle_version = "Slov4.0", Real_haplotypes = FALSE, Data_type = "Phased_GE", pedigree = Workers_with_fathers_id, method = "power_mean")
+Route1_Real_FLIP <- Route1_flipping(Beagle_version = "Non", Real_haplotypes = TRUE, Data_type = "Real", pedigree = pedigree, method = "power_mean")
+Route1_GE_phased_FLIP <- Route1_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_GE", pedigree = pedigree, method = "power_mean")
+Route1_nGE_phased_FLIP <- Route1_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_nGE", pedigree = pedigree, method = "power_mean")
+
+Route1_Slov_FLIP <- Route1_flipping(Beagle_version = "Slov4.0", Real_haplotypes = FALSE, Data_type = "Phased_GE", pedigree = Workers_with_fathers_id, method = "power_mean")
 
 #function for checking  
 check_haplotype_postFlip <- function(complete_haplotypes = NULL, results = NULL, pedigree = NULL) {
@@ -1275,10 +1296,9 @@ Route2_flipping <- function(Beagle_version = NULL, Data_type = NULL, pedigree = 
   return(results)
 }
 
-
-Real_FLIP_R2 <- Route2_flipping(Beagle_version = "Non", Real_haplotypes = TRUE, Data_type = "Real", pedigree = pedigree, method = "power_mean")
-GE_phased_FLIP_R2 <- Route2_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_GE", pedigree = pedigree, method = "power_mean")
-nGE_phased_FLIP_R2 <- Route2_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_nGE", pedigree = pedigree, method = "power_mean")
+Route2_Real_FLIP <- Route2_flipping(Beagle_version = "Non", Real_haplotypes = TRUE, Data_type = "Real", pedigree = pedigree, method = "power_mean")
+Route2_GE_phased_FLIP <- Route2_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_GE", pedigree = pedigree, method = "power_mean")
+Route2_nGE_phased_FLIP <- Route2_flipping(Beagle_version = "4.0", Real_haplotypes = FALSE, Data_type = "Phased_nGE", pedigree = pedigree, method = "power_mean")
 
 
 #####################################################################################
@@ -1351,20 +1371,20 @@ calculate_gametic_relatedness <- function(sorted_offspring_haplotypes, all_haplo
   return(gametic_results)
 }
 
+colnames(Route1_Real_FLIP$real_results_flipped) <- colnames(real_haplotypes)
+Route1_Gametic_real <- calculate_gametic_relatedness(sorted_offspring_haplotypes = Route1_Real_FLIP$real_results_flipped , all_haplotypes = real_haplotypes, pedigree = pedigree)
+Route1_Gametic_real$Phasing <- "True"
 
-Gametic_real <- calculate_gametic_relatedness(sorted_offspring_haplotypes = Real_FLIP$real_results_flipped , all_haplotypes = real_haplotypes, pedigree = pedigree)
-Gametic_real$Phasing <- "True"
+Route1_Gametic_nGE_phased <- calculate_gametic_relatedness(sorted_offspring_haplotypes = Route1_nGE_phased_FLIP$results_flipped, all_haplotypes = nGE4.0_phasedhaplotypes, pedigree = pedigree)
+Route1_Gametic_nGE_phased$Phasing <- "Phased_nGE"
 
-Gametic_nGE_phased <- calculate_gametic_relatedness(sorted_offspring_haplotypes = nGE_phased_FLIP$results_flipped, all_haplotypes = nGE4.0_phasedhaplotypes, pedigree = pedigree)
-Gametic_nGE_phased$Phasing <- "Phased_nGE"
+Route1_Gametic_GE_phased <- calculate_gametic_relatedness(sorted_offspring_haplotypes = Route1_GE_phased_FLIP$results_flipped, all_haplotypes = GE4.0_phasedhaplotypes, pedigree = pedigree)
+Route1_Gametic_GE_phased$Phasing <- "Phased_GE"
 
-Gametic_GE_phased <- calculate_gametic_relatedness(sorted_offspring_haplotypes = GE_phased_FLIP$results_flipped, all_haplotypes = GE4.0_phasedhaplotypes, pedigree = pedigree)
-Gametic_GE_phased$Phasing <- "Phased_GE"
+Route1_Gametic_Slov <- calculate_gametic_relatedness(sorted_offspring_haplotypes = Route1_Slov_FLIP$results_flipped, all_haplotypes = Slov4.0_phasedhaplotypes, pedigree = Slov_pedigree)
+Route1_Gametic_Slov$Phasing <- "Real"
 
-Gametic_Slov <- calculate_gametic_relatedness(sorted_offspring_haplotypes = Slov_FLIP$results_flipped, all_haplotypes = Slov4.0_phasedhaplotypes, pedigree = Slov_pedigree)
-Gametic_Slov$Phasing <- "Real"
-
-Gametic_df <- rbind(Gametic_real, Gametic_nGE_phased,  Gametic_GE_phased)
+Gametic_df <- rbind(Route1_Gametic_real, Route1_Gametic_nGE_phased,  Route1_Gametic_GE_phased)
 
 library(ggplot2)
 library(gridExtra)
@@ -1533,14 +1553,17 @@ calculate_gametic_relatedness_R2 <- function(sorted_offspring_haplotypes, all_ha
   return(gametic_results)
 }
 
-Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Real_FLIP_R2$real_results_flipped , all_haplotypes = real_haplotypes, pedigree = pedigree)
-Gametic_TRUE$Phasing <- "True"
+colnames(Route2_Real_FLIP$real_results_flipped) <- colnames(real_haplotypes)
+Route2_Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_Real_FLIP$real_results_flipped , all_haplotypes = real_haplotypes, pedigree = pedigree)
+Route2_Gametic_TRUE$Phasing <- "True"
 
-Gametic_nGE_phased <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = nGE_phased_FLIP_R2$phased_results_flipped, all_haplotypes = nGE4.0_phasedhaplotypes, pedigree = pedigree)
-Gametic_nGE_phased$Phasing <- "Phased_nGE"
+Route2_Gametic_nGE_phased <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_nGE_phased_FLIP$phased_results_flipped, all_haplotypes = nGE4.0_phasedhaplotypes, pedigree = pedigree)
+Route2_Gametic_nGE_phased$Phasing <- "Phased_nGE"
 
-Gametic_GE_phased <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = GE_phased_FLIP_R2$phased_results_flipped, all_haplotypes = GE4.0_phasedhaplotypes, pedigree = pedigree)
-Gametic_GE_phased$Phasing <- "Phased_GE"
+Route2_Gametic_GE_phased <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_GE_phased_FLIP$phased_results_flipped, all_haplotypes = GE4.0_phasedhaplotypes, pedigree = pedigree)
+Route2_Gametic_GE_phased$Phasing <- "Phased_GE"
+
+Gametic_df_R2 <- rbind(Route2_Gametic_TRUE, Route2_Gametic_nGE_phased,  Route2_Gametic_GE_phased)
 
 library(ggplot2)
 library(cowplot)
@@ -1650,7 +1673,7 @@ Plotting_Gametic_R2 <- function(df, phased_type, plotting_styles) {
   print(combined_plots_with_legend)
 }
 
-Plotting_Gametic_R2(df = Gametic_df, phased_type = c("True", "Phased_nGE", "Phased_GE"), plotting_styles = c("density"))
+Plotting_Gametic_R2(df = Gametic_df_R2, phased_type = c("True", "Phased_nGE", "Phased_GE"), plotting_styles = c("density"))
 
 
 #####################################################################################
@@ -1745,10 +1768,18 @@ calc_nPaternity_perQueen <- function(results, threshold, pedigree) {
   return(nPaternity)
 }
 
-Real_nFathers <- calc_nPaternity_perQueen(results = Real_FLIP$real_results_flipped, threshold = 0.95, pedigree = pedigree)
-nGE_nFathers <- calc_nPaternity_perQueen(results = nGE_phased_FLIP$results_flipped, threshold = 0.95, pedigree = pedigree)
-GE_nFathers <- calc_nPaternity_perQueen(results = GE_phased_FLIP$results_flipped, threshold = 0.85, pedigree = pedigree)
-Slov_nFathers85 <- calc_nPaternity_perQueen(results = Slov_FLIP$results_flipped, threshold = 0.85, pedigree = pedigree)
+Route_1_Real_nFathers <- calc_nPaternity_perQueen(results = Route_1_Real_FLIP$real_results_flipped, threshold = 0.95, pedigree = pedigree)
+Route_1_nGE_nFathers <- calc_nPaternity_perQueen(results = Route_1_nGE_phased_FLIP$results_flipped, threshold = 0.95, pedigree = pedigree)
+Route_1_GE_nFathers <- calc_nPaternity_perQueen(results = Route_1_GE_phased_FLIP$results_flipped, threshold = 0.95, pedigree = pedigree)
+Route_1_Slov_nFathers95 <- calc_nPaternity_perQueen(results = Route_1_Slov_FLIP$results_flipped, threshold = 0.95, pedigree = pedigree)
+
+
+Route_2_Real_nFathers <- calc_nPaternity_perQueen(results = Real_FLIP_R2$real_results_flipped, threshold = 0.95, pedigree = pedigree)
+Route_2_nGE_nFathers <- calc_nPaternity_perQueen(results = nGE_phased_FLIP_R2$results_flipped, threshold = 0.95, pedigree = pedigree)
+Route_2_GE_nFathers <- calc_nPaternity_perQueen(results = GE_phased_FLIP_R2$results_flipped, threshold = 0.95, pedigree = pedigree)
+Route_2_Slov_nFathers95 <- calc_nPaternity_perQueen(results = Route_2_Slov_FLIP$results_flipped, threshold = 0.95, pedigree = pedigree)
+
+
 
 #################################
 #check the accuracy of the assignments 
@@ -1762,7 +1793,6 @@ father_haplotypes <- pullSnpHaplo(PopMerged, simParam = SP)
 father_haplotypes_1 <- father_haplotypes[rownames(father_haplotypes) %in% father_id_1,]
 
 #replace _1 with _paternal so that it can all be compared 
-father_id_paternal <- unique(father_id_paternal)
 father_all_unique <- unique(father_id_all)
 father_id_paternal <- father_all_unique[order(father_all_unique)]
 father_id_paternal <- paste(father_id_paternal, "paternal", sep = "_")
@@ -1981,30 +2011,32 @@ run_paternity_tests <- function(results_arg, sister_thresholds, father_test_thre
 }
 
 # Define the thresholds you want to test
-sister_thresholds <- c(1, 0.95, 0.85, 0.75)
+sister_thresholds <- c(1, 0.95, 0.85)
 father_test_thresholds <- c(0.9, 0.95, 1)
 
 # Run the function and specify the results dataset to use
-Real_FatherTest_Results <- run_paternity_tests(
-  results_arg = Real_FLIP$real_results_flipped, 
+#Route1 
+r1_Real_FatherTest_Results <- run_paternity_tests(
+  results_arg = Route1_Real_FLIP$real_results_flipped, 
   sister_thresholds = 1,
   father_test_thresholds = 1,
   father_haplotypes = father_haplotype_pat
 )
 
-nGE_Father_Test_Results <- run_paternity_tests(
-  results_arg = nGE_phased_FLIP$results_flipped, 
+r1_nGE_Father_Test_Results <- run_paternity_tests(
+  results_arg = Route1_nGE_phased_FLIP$results_flipped, 
   sister_thresholds = sister_thresholds,
   father_test_thresholds = father_test_thresholds,
   father_haplotypes = father_haplotype_pat
 )
 
-GE_Father_Test_Results <- run_paternity_tests(
-  results_arg = GE_phased_FLIP$results_flipped,  
+r1_GE_Father_Test_Results <- run_paternity_tests(
+  results_arg = Route1_GE_phased_FLIP$results_flipped,  
   sister_thresholds = sister_thresholds,
   father_test_thresholds = father_test_thresholds,
   father_haplotypes = father_haplotype_pat
 )
+
 
 Slov_FatherTest_results <- run_paternity_tests_Slov(
   results_arg = Slov_FLIP$results_flipped,  
@@ -2014,62 +2046,151 @@ Slov_FatherTest_results <- run_paternity_tests_Slov(
 )
 
 
-# Define the plotting function
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-library(patchwork)  # Ensure this is loaded
 
-# Define the plotting function
-plot_paternity_accuracy <- function(Results) {
+#Route 2 paternity testing. Use only sister thresholds to figure out the paternity
+# Define the function to run the test with dynamic results and thresholds, running them separately
+Route2_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree) {
   
-  # Ensure Results has the correct column names and data types
-  Results <- as.data.frame(Results)
+  # Extract paternal haplotypes (still named '_paternal' in the results)
+  results_paternal <- rownames(results)[grep(paste0("_paternal"), rownames(results))]
+  results_paternal <- results[results_paternal, , drop = FALSE]
   
-  # Add columns for `sister_threshold` and `father_test_threshold` by extracting them from rownames if they are not already present
-  if (!("sister_threshold" %in% colnames(Results))) {
-    Results <- Results %>%
-      rownames_to_column("threshold_combination") %>%
-      separate(threshold_combination, into = c("prefix", "sis", "fat"), sep = "_", remove = FALSE) %>%
-      mutate(sister_threshold = as.numeric(gsub("sis", "", sis)),
-             father_test_threshold = as.numeric(gsub("fat", "", fat))) %>%
-      select(-prefix, -sis, -fat, -threshold_combination)
+  # Create a loop grouping together sisters using pedigree 
+  queen_ids <- unique(pedigree$mother)
+  
+  # Initialize a data frame to store the results
+  nPaternity <- data.frame(queen_id = queen_ids, 
+                           num_workers = rep(0, length(queen_ids)),
+                           num_sister_groups_estimated = rep(0, length(queen_ids)),
+                           stringsAsFactors = FALSE,
+                           sister_threshold = sister_threshold)
+  
+  for (i in 1:length(queen_ids)) {
+    print(i)
+    queen_id <- queen_ids[i]
+    sister_worker_ids <- t(pedigree[pedigree$mother == queen_id, "id"])
+    
+    # Pull out the results_paternal with the worker IDs
+    pattern <- paste0("^(", paste(sister_worker_ids, collapse = "|"), ")_paternal$")
+    matching_indices <- grep(pattern, rownames(results_paternal))
+    sister_paternal <- results_paternal[matching_indices, , drop = FALSE]
+    
+    # Store the number of workers for this queen
+    nPaternity$num_workers[i] <- nrow(sister_paternal)
+    
+    # Ensure we have data to work with
+    if (nrow(sister_paternal) == 0) {
+      next
+    }
+    
+    # Initialize a list to hold sister groups (clusters)
+    sister_groups <- list()
+    still_unmatched <- rownames(sister_paternal)
+    
+    # Define the similarity function to compare workers
+    calculate_similarity <- function(hap1, hap2) {
+      valid_indices <- !is.na(hap1) & !is.na(hap2)
+      
+      if (sum(valid_indices) == 0) {
+        return(NA)  # Return NA if no valid comparisons can be made
+      }
+      
+      sum(hap1[valid_indices] == hap2[valid_indices]) / length(hap1[valid_indices])
+    }
+    
+    # Step 1: Group workers based on similarity (sister threshold)
+    for (a in 1:(length(still_unmatched) - 1)) {
+      for (b in (a + 1):length(still_unmatched)) {
+        worker_a <- still_unmatched[a]
+        worker_b <- still_unmatched[b]
+        
+        similarity_score <- calculate_similarity(sister_paternal[worker_a, ], sister_paternal[worker_b, ])
+        
+        # If they meet the sister threshold, group them together
+        if (!is.na(similarity_score) && similarity_score >= sister_threshold) {
+          group_found <- FALSE
+          # Check if worker_a or worker_b already belongs to a group
+          for (group_name in names(sister_groups)) {
+            if (worker_a %in% sister_groups[[group_name]] || worker_b %in% sister_groups[[group_name]]) {
+              sister_groups[[group_name]] <- unique(c(sister_groups[[group_name]], worker_a, worker_b))
+              group_found <- TRUE
+              break
+            }
+          }
+          # If no group was found, create a new group for them
+          if (!group_found) {
+            new_group_name <- paste0("group_", length(sister_groups) + 1)
+            sister_groups[[new_group_name]] <- c(worker_a, worker_b)
+          }
+        }
+      }
+    }
+    
+    # Step 2: Ensure all remaining workers (if any) are assigned to their own groups
+    unmatched_workers <- setdiff(still_unmatched, unlist(sister_groups))
+    for (worker in unmatched_workers) {
+      new_group_name <- paste0("group_", length(sister_groups) + 1)
+      sister_groups[[new_group_name]] <- c(worker)
+    }
+    
+    # Store the number of estimated sister groups (clusters)
+    nPaternity$num_sister_groups_estimated[i] <- length(sister_groups)
   }
   
-  # Calculate the accuracy as num_fathers_correct / num_fathers_actual
-  Results <- Results %>%
-    mutate(accuracy = (num_fathers_correct/ num_fathers_estimated) *100,
-           accuracy = ifelse(is.nan(accuracy), 0, accuracy))  # Handle NaNs by replacing them with 0
-  
-  summarised_results <- Results %>%
-    group_by(sister_threshold, father_accuracy_threshold) %>%
-    summarize(average_accuracy = mean(accuracy, na.rm = TRUE), .groups = 'drop')
-  
-  
-  # Plot 2: Accuracy of determined sires
-  plot2 <- ggplot(summarised_results, aes(x = as.factor(sister_threshold), y = average_accuracy, fill = as.factor(father_accuracy_threshold))) +
-    geom_bar(stat = "identity", position = "dodge") +
-    labs(x = "Sister Threshold", y = "Accuracy of the estimated patrilines (%)", fill = "Father Threshold") +
-    theme_minimal()+
-    theme(
-      plot.title = element_text(size = 18, face = "bold"),
-      axis.title.x = element_text(size = 14),
-      axis.title.y = element_text(size = 14),
-      axis.text.x = element_text(size = 14),
-      axis.text.y = element_text(size = 14),
-      legend.title = element_text(size = 14),
-      legend.text = element_text(size = 14),
-      legend.position = "right"  # Ensure this is inside the theme() function
-    )
-  
-  # Return the combined plot
-  return(plot2)
+  return(nPaternity)
 }
 
-plot_paternity_accuracy(nGE_Father_Test_Results)
-plot_paternity_accuracy(GE_Father_Test_Results)
-plot_paternity_accuracy(Real_FatherTest_Results)
+run_sister_clustering_tests <- function(results_arg, sister_thresholds, pedigree) {
+  
+  # Initialize a list to store the results
+  results_list <- list()
+  
+  # Loop over each sister_threshold
+  for (sister_threshold in sister_thresholds) {
+    
+    # Create a descriptive name for the result
+    result_name <- paste0("sis", sister_threshold)
+    
+    # Print to ensure the threshold is being passed correctly
+    print(paste("Running for sister_threshold:", sister_threshold))
+    
+    # Run the function for each sister_threshold
+    result <- Route2_calc_nPaternity_Accuracy(
+      results = results_arg,      # Pass the dynamic results argument here
+      sister_threshold = sister_threshold,  # sister threshold
+      pedigree = pedigree         # Pass the pedigree information
+    )
+    
+    # Store the result with the unique name
+    results_list[[result_name]] <- result
+    
+    # Print to confirm each result has been stored
+    print(paste("Finished:", result_name))
+  }
+  
+  # Return the list of results
+  return(results_list)
+}
 
+#Route2 
+
+r2_Real_FatherTest_Results <- run_sister_clustering_tests(
+  results_arg = Route2_Real_FLIP$real_results_flipped, 
+  sister_thresholds = sister_thresholds,
+  pedigree = pedigree
+)
+
+r2_nGE_Father_Test_Results <- run_sister_clustering_tests(
+  results_arg = Route2_nGE_phased_FLIP$phased_results_flipped, 
+  sister_thresholds = sister_thresholds,
+  pedigree = pedigree
+)
+
+r2_GE_Father_Test_Results <- run_sister_clustering_tests(
+  results_arg = Route2_GE_phased_FLIP$phased_results_flipped,  
+  sister_thresholds = sister_thresholds,
+  pedigree = pedigree
+)
 
 
 
@@ -2312,7 +2433,7 @@ plot_paternity_number <- function(Results) {
     geom_point(aes(y = num_workers, shape = worker_label), color = "black", size = 7, stroke = 1, position = position_dodge(width = 0.5)) +  # Large black crosses for num_workers
     geom_point(aes(y = num_fathers_actual, shape = known_label), color = "red", size = 7, stroke = 2, position = position_dodge(width = 0.5)) + 
     scale_color_discrete(name = "Sister Threshold") +  # Scale for color legend
-    scale_shape_manual(values = c(16, 17,4, 4), name = "Father Threshold") +  # Manual shapes for father accuracy and worker labels
+    scale_shape_manual(values = c(16, 17,18,4, 4), name = "Father Threshold") +  # Manual shapes for father accuracy and worker labels
     labs(x = "Colony ID", y = "Number of Determined Patrilines") +
     theme_minimal(base_size = 14) +
     theme(
@@ -2330,10 +2451,58 @@ plot_paternity_number <- function(Results) {
   return(plot1)
 }
 
-plot_paternity_number(Slov_FatherTest_results)
-plot_paternity_number(nGE_Father_Test_Results)
-plot_paternity_number(GE_Father_Test_Results)
+
+plot_paternity_number(r1_nGE_Father_Test_Results)
+plot_paternity_number(r1_GE_Father_Test_Results)
 
 
+
+plot_paternity_number_r2 <- function(Results) {
+  
+  # Ensure Results has the correct column names and data types
+  Results <- as.data.frame(Results)
+  
+  # Add columns for `sister_threshold` by extracting them from rownames if they are not already present
+  if (!("sister_threshold" %in% colnames(Results))) {
+    Results <- Results %>%
+      rownames_to_column("threshold_combination") %>%
+      separate(threshold_combination, into = c("prefix", "sis"), sep = "_", remove = FALSE) %>%
+      mutate(sister_threshold = as.numeric(gsub("sis", "", sis))) %>%
+      select(-prefix, -sis, -threshold_combination)
+  }
+  
+  # Convert sister_threshold to factor and handle worker_label
+  Results <- Results %>%
+    mutate(sister_threshold = as.factor(sister_threshold),
+           worker_label = "nWorkers",
+           known_label = "nKnown Patrilines")  # Add a label for the legend
+  
+  # Plot 1: Scatter plot of number of determined sires (for each queen on X-axis)
+  plot1 <- ggplot(Results, aes(x = as.factor(queen_id)) ) +
+    geom_point(aes(y = num_workers, shape = worker_label), color = "black", size = 7, stroke = 1, position = position_dodge(width = 0.5)) +  # Large black crosses for nWorkers
+    geom_point(aes(y = num_fathers_actual, shape = known_label), color = "red", size = 7, stroke = 2, position = position_dodge(width = 0.5)) +  # Red crosses for nKnown Patrilines
+    geom_point(aes(y = num_sister_groups_estimated, color = sister_threshold), size = 7, position = position_dodge(width = 0.5)) +  # Points for num_sister_groups_estimated
+    scale_color_discrete(name = "Sister Threshold") +  # Scale for color legend
+    scale_shape_manual(values = c(4, 4), name = element_blank()) +  # Cross shapes for nWorkers and nKnown Patrilines
+    labs(x = "Colony ID", y = "Number of Groups") +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(size = 18, face = "bold"),
+      axis.title.x = element_text(size = 16),
+      axis.title.y = element_text(size = 16),
+      axis.text.x = element_text(size = 14),
+      axis.text.y = element_text(size = 14),
+      legend.title = element_text(size = 14),
+      legend.text = element_text(size = 14),
+      legend.position = "right"  # Ensure this is inside the theme() function
+    )
+  
+  # Return the combined plot
+  return(plot1)
+}
+
+
+plot_paternity_number_r2(r2_nGE_Father_Test_Results)
+plot_paternity_number_r2(r2_GE_Father_Test_Results)
 
 
