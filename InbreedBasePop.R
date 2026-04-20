@@ -15,6 +15,61 @@ library(future)
 library(future.apply)
 library(doParallel)
 
+#Modified functions from Audrey's nesting functions
+createArray= function(array_name, array_number, nChr, segSites, nSNPPerChr, pop){
+  snpArray = vector("list", nChr)
+  for (chr in 1:nChr) {
+    #get the haplotypes for all sites within the pop
+    x = pullSegSiteHaplo(pop, chr = chr)
+    #pop allele frequency at all sites
+    alleleFreq = apply(X = x, MARGIN = 2, FUN = mean)
+    #Will pick SNP based on allele frequency distribution
+    # tmp = runif_from_nonunif(x = data.frame(id = 1:segSites[[chr]], value = alleleFreq), n = nSNPPerChr[[chr]]) #run with runif_from_nonunif
+
+    tmp_data <- data.frame(id = 1:length(alleleFreq), value = alleleFreq)
+    #Select SNP at random
+    tmp <- sample(nrow(tmp_data), size = nSNPPerChr[[chr]], replace = FALSE) # run without runif_from_nonunif
+    #save selected SNP
+    sel <- tmp_data[tmp, "id"] #without runif_from_nonunif
+    #sel = tmp$id #with runif_from_nonunif
+    #save SNP in array
+    snpArray[[chr]] = sort(sel) # Must be sorted
+  }
+
+  snpArray = do.call("c", snpArray) # Collapse list to vector
+  snpArray = new(
+    Class = "LociMap",
+    nLoci = sum(as.integer(nSNPPerChr)),
+    lociPerChr = as.integer(nSNPPerChr),
+    lociLoc = snpArray,
+    name = array_name
+  )
+  SP$snpChips[[array_number]] = snpArray
+
+}
+
+runif_from_nonunif <- function(x, n, n_bins = 100) {
+  samples_min <- min(x$value)
+  samples_max <- max(x$value)
+  bin_size <- (samples_max - samples_min) / n_bins
+  bin_seq <- seq(from = samples_min, to = samples_max, by = bin_size)
+  x$bin <- cut(x = x$value, breaks = bin_seq)
+  bin_freq <- as.data.frame(table(x$bin))
+  colnames(bin_freq) <- c("bin", "freq")
+  x <- merge(x = x, y = bin_freq)
+  # Sample without replacement and up-weight low frequency values so that
+  # once we sample these out, we can then move to more common & high frequency
+  # values
+  # TODO: maybe this should be done differently/better by sampling bins at
+  # random and then randomly within a bin?
+  sel <- sample.int(n = nrow(x), size = n, prob = 1 / x$freq, replace = FALSE)
+  return(x[sel, c("id", "value")])
+}
+
+
+
+
+
 # Create/download the founder genomes from SIMplyBee
 founderGenomes <- simulateHoneyBeeGenomes(nCar = 30,
                                           nChr = 16,
@@ -27,9 +82,9 @@ load("/home/jana/Documents/1Projects/Honeybee_BeeKini/FounderGenomes_ThreePop_16
 #load("~/Desktop/Slovenia data/Attempt2/founderGenomes_10ind.Rdata")
 
 # Try a different genom simulation
-founderGenomes = quickHaplo(nInd = 100, nChr=16, segSites = 1000)
-founderGenomes = runMacs(nInd = 30, nChr = 16, segSites = 1000,
-                         species = "CATTLE")
+#founderGenomes = quickHaplo(nInd = 100, nChr=16, segSites = 1000)
+#founderGenomes = runMacs(nInd = 30, nChr = 16, segSites = 1000,
+#                         species = "CATTLE")
 
 
 #Set up the SP ####
@@ -43,11 +98,16 @@ SP$setTrackPed(TRUE)
 # Track the recombination
 SP$setTrackRec(TRUE)
 
-SP$addSnpChip(nSnpPerChr = 10) # CHANGE THE SNP SIZE HERE!!!!! (ADD A FEW EXTRA FOR QC THEN SAMPLE THE CORRECT SIZES)# define csd chromomsome
+
+# Add a SNP chip (Audrey's)
+createArray(array_name = 'BigArray', array_number = 1, nChr = 16, segSites = rep(1000, 16), nSNPPerChr = rep(261, 16), pop = founderGenomes)
+#save array
+array = colnames(pullSnpGeno(pop = founderGenomes, snpChip = 1, simParam = SP))
+write.table(array, "Bigarray.txt", sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)
+
+# define csd chromomsome
 csdChr <- SP$csdChr
-
-
-# Add traitsNULL# Add traits - taken from the QuantGen vignettte
+# Add traits - taken from the QuantGen vignettte (find on simplybee.info)
 mean <- c(20, 0)
 varA <- c(1, 1 / SP$nWorkers)
 corA <- matrix(data = c( 1.0, -0.5,
@@ -56,10 +116,26 @@ SP$addTraitA(nQtlPerChr = 100, mean = mean, var = varA, corA = corA,
              name = c("queenTrait", "workersTrait"))
 
 varE <- c(3, 3 / SP$nWorkers)
-# TODO: what is a reasonable environmental correlation between queen and worker effects?
 corE <- matrix(data = c(1.0, 0.3,
                         0.3, 1.0), nrow = 2, byrow = TRUE)
 SP$setVarE(varE = varE, corE = corE)
+
+
+#Create vector for array size 1728, 800, 160,16
+nSNP_array <- rbind(c(108, 4L), c(50, 3L), c(10, 2L), c(1,1L))
+
+#nest arrayssss
+for (n in 2:5){ #we create the first array (larger one) outside of the loop and subset it to create the others
+  tmp1 = vector()
+  for (chr in 1:16){
+    tmp2 = sample(colnames(pullSnpGeno(pop = founderGenomes, snpChip = (n-1), chr = chr, simParam = SP)), size = nSNP_array[(n-1),1], replace = FALSE)
+
+    tmp1 = c(tmp1, tmp2)
+  }
+  SP$addSnpChipByName(tmp1, name=paste0('SNP_', nSNP_array[n-1,2]))
+  write.table(tmp1, paste0("SNP_", nSNP_array[(n-1),2], "_array.txt"), sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)
+}
+
 
 ##################################################################################
 ##################################################################################
@@ -127,6 +203,8 @@ for (gen in 1:10) {
   if (gen == 1) {
     #Create base population#realGenoCreate base population
     #basePop = newPop(founderGenomes[1:30])
+
+
     basePop = newPop(founderGenomes[1:10])
     print(paste0(nInd(basePop), " base queens."))
     baseAF = calcBeeAlleleFreq(pullSegSiteGeno(basePop), sex = rep("F", basePop@nInd))
@@ -249,7 +327,7 @@ for (gen in 1:10) {
     colony1 <- cross(colony1, drones = fathers[[1]])
 
     #create Mating station Drones where the dpcs are
-    DPQs <- createVirginQueens(colony1, nInd = 4)
+    DPQs <- createVirginQueens(colony1, nInd = 10)
 
     # Compute relatedness of DPQs
     DPQ_geno = pullSegSiteGeno(DPQs)
@@ -271,12 +349,12 @@ for (gen in 1:10) {
 
 save.image(file = "200000NE_HBGenome_CsdOn_20gen.RData")
 save.image(file = "10000NE_HBGenome_CsdOn_20gen.RData")
-save.image(file = "2000NE_HBGenome_CsdOn_20gen.RData")
+save.image(file = "2000NE_HBGenome_CsdOn_10gen_PlusArrrays.RData")
 save.image(file = "CattleGenome_CsdOn_20gen.RData")
 
 rm(list = ls())
 load("10000NE_HBGenome_CsdOn_20gen.RData")
-load("2000NE_HBGenome_CsdOn_20gen.RData")
+load("2000NE_HBGenome_CsdOn_10gen.RData")
 load("CattleGenome_CsdOn_20gen.RData")
 ##################################################################################
 # PLOT
@@ -346,7 +424,7 @@ meanRel_queen %>%
   facet_wrap(. ~ SelfRel, scales="free", nrow=2) +
   xlab("Mean relatedeness") + ylab("Generation")
 
-meanRel_queen %>% filter(Gen %in%  c(10, "Real")) %>%
+meanRel_queen %>% filter(Gen %in%  c(5, "Real")) %>%
   dplyr::mutate(PlotPop = paste0(Data, "_", Pop)) %>%
   ggplot(aes(x = PlotPop, y = meanRel))+
   geom_col() +
@@ -355,4 +433,5 @@ meanRel_queen %>% filter(Gen %in%  c(10, "Real")) %>%
 
 ggplot(data = nQueens) + geom_line(aes(x = as.numeric(Gen), y =nQueens, colour = Mating)) +
   ylim(c(0, max(nQueens$nQueens)))
+
 
