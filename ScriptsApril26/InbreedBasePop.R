@@ -133,7 +133,8 @@ for (n in 2:5){ #we create the first array (larger one) outside of the loop and 
     tmp1 = c(tmp1, tmp2)
   }
   SP$addSnpChipByName(tmp1, name=paste0('SNP_', nSNP_array[n-1,2]))
-  write.table(tmp1, paste0("SNP_", nSNP_array[(n-1),2], "_array.txt"), sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)
+  dir.create("Data/")
+  write.table(tmp1, paste0("Data/SNP_", nSNP_array[(n-1),2], "_array.txt"), sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)  
 }
 
 
