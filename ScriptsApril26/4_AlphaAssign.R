@@ -157,6 +157,65 @@ NoGE_Alpha_output <- Process_AlphaAssign_output(GE = FALSE)
 WithGE_Alpha_output <- Process_AlphaAssign_output(GE = TRUE)
 
 
+
+# Updating the pedigree 
+#Original pedigree = Alpha_pedigree
+# NoGE updated pedigree ----------------------------------------------------
+#Using the 1.7k SNP and the 50k SNP
+NoGE_2k_pedigree <- read.table("AlphaGeno_SNP_3_NoGE.sires")
+NoGE_2k_pedigree <- NoGE_2k_pedigree[NoGE_2k_pedigree$chosen == 1, ]
+NoGE_2k_pedigree <- NoGE_2k_pedigree[, c(1,2)]
+colnames(NoGE_2k_pedigree) <- c("id", "sire")
+
+# Match ids to get corresponding sires from NoGE_2k_pedigree
+idx <- match(Alpha_pedigree$id, NoGE_2k_pedigree$id)
+# Replace only where sire == 0 and a match exists
+update_sires <- Alpha_pedigree$sire == 0 & !is.na(idx)
+Alpha_pedigree_2k_NoGE$sire[update_sires] <- NoGE_2k_pedigree$sire[idx[update_sires]]
+write.table(Alpha_pedigree_2k_NoGE, file = "Data/AlphaAssign/Alpha_pedigree_2k_NoGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+
+
+NoGE_50k_pedigree <- read.table("AlphaGeno_SNP_5_NoGE.sires")
+NoGE_50k_pedigree <- NoGE_50k_pedigree[NoGE_50k_pedigree$chosen == 1, ]
+NoGE_50k_pedigree <- NoGE_50k_pedigree[, c(1,2)]
+colnames(NoGE_50k_pedigree) <- c("id", "sire")
+
+# Match ids to get corresponding sires from NoGE_50k_pedigree
+idx <- match(Alpha_pedigree$id, NoGE_50k_pedigree$id)
+# Replace only where sire == 0 and a match exists
+update_sires <- Alpha_pedigree$sire == 0 & !is.na(idx)
+Alpha_pedigree_50k_NoGE$sire[update_sires] <- NoGE_50k_pedigree$sire[idx[update_sires]]
+write.table(Alpha_pedigree_50k_NoGE, file = "Data/AlphaAssign/Alpha_pedigree_50k_NoGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+
+
+# WithGE updated pedigree ----------------------------------------------------
+#Using the 1.7k SNP and the 50k SNP
+WithGE_2k_pedigree <- read.table("AlphaGeno_SNP_3_WithGE.sires")
+WithGE_2k_pedigree <- WithGE_2k_pedigree[WithGE_2k_pedigree$chosen == 1, ]
+WithGE_2k_pedigree <- WithGE_2k_pedigree[, c(1,2)]
+colnames(WithGE_2k_pedigree) <- c("id", "sire")
+
+# Match ids to get corresponding sires from WithGE_2k_pedigree
+idx <- match(Alpha_pedigree$id, WithGE_2k_pedigree$id)
+# Replace only where sire == 0 and a match exists
+update_sires <- Alpha_pedigree$sire == 0 & !is.na(idx)
+Alpha_pedigree_2k_WithGE$sire[update_sires] <- WithGE_2k_pedigree$sire[idx[update_sires]]
+write.table(Alpha_pedigree_2k_WithGE, file = "Data/AlphaAssign/Alpha_pedigree_2k_WithGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+
+
+WithGE_50k_pedigree <- read.table("AlphaGeno_SNP_5_WithGE.sires")
+WithGE_50k_pedigree <- WithGE_50k_pedigree[WithGE_50k_pedigree$chosen == 1, ]
+WithGE_50k_pedigree <- WithGE_50k_pedigree[, c(1,2)]
+colnames(WithGE_50k_pedigree) <- c("id", "sire")
+
+# Match ids to get corresponding sires from WithGE_50k_pedigree
+idx <- match(Alpha_pedigree$id, WithGE_50k_pedigree$id)
+# Replace only where sire == 0 and a match exists
+update_sires <- Alpha_pedigree$sire == 0 & !is.na(idx)
+Alpha_pedigree_50k_WithGE$sire[update_sires] <- WithGE_50k_pedigree$sire[idx[update_sires]]
+write.table(Alpha_pedigree_50k_WithGE, file = "Data/AlphaAssign/Alpha_pedigree_50k_WithGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+
+
 #******************************************************************************
 #                     2. REAL DATA
 #******************************************************************************
@@ -213,6 +272,13 @@ system(paste0("bash ScriptsApril26/RunAlphaAssign_RealData.sh AlphaGeno_RealData
 #Summarise the dataset     
 Alpha_output <- read.table("Outputs/AlphaAssign/AlphaGeno_RealData.sires", header = TRUE)
     
+    Sires_assigned <- Alpha_output[Alpha_output$chosen == 1, ]
+    nSires_assigned <- nrow(Sires_assigned)
+    
+    Offspring_and_candidateParent <- Sires_assigned[, c(1,2)]
+    colnames(Offspring_and_candidateParent) <- c("id", "sire")
+
+    
 Sires_assigned <- Alpha_output[Alpha_output$chosen == 1, ]
 nSires_assigned <- nrow(Sires_assigned)
 
@@ -231,4 +297,12 @@ Real_Alpha_df <- data.frame(
 
 AlphaAssign_Summary <- rbind(NoGE_Alpha_output, WithGE_Alpha_output, Real_Alpha_df)
 write.table(AlphaSummary, file = "Alpha_summary.txt", sep = " ", quote = F, col.names = T, row.names = F)
-    
+
+
+# Match ids to get corresponding sires from WithGE_50k_pedigree
+idx <- match(Alpha_pedigree$id, Offspring_and_candidateParent$id)
+# Replace only where sire == 0 and a match exists
+update_sires <- Alpha_pedigree$sire == 0 & !is.na(idx)
+Alpha_pedigree_Real$sire[update_sires] <- Offspring_and_candidateParent$sire[idx[update_sires]]
+write.table(Alpha_pedigree_Real, file = "Data/AlphaAssign/Alpha_pedigree_Real.txt", sep = " ", quote = F, col.names = F, row.names = F)
+
