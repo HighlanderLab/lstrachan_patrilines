@@ -73,24 +73,11 @@ runif_from_nonunif <- function(x, n, n_bins = 100) {
 # Create/download the founder genomes from SIMplyBee
 founderGenomes <- simulateHoneyBeeGenomes(nCar = 30,
                                           nChr = 16,
-                                          nSegSites = 1000,
-                                          Ne = 2000)
-
-save(founderGenomes, file = "~/Documents/1Projects/HoneybeeParentage/FounderGenome_ParentagePaper.RData")
-load("~/Documents/1Projects/HoneybeeParentage/FounderGenome_ParentagePaper.RData")
-load("/home/jana/Documents/1Projects/Honeybee_BeeKini/FounderGenomes_ThreePop_16chr.RData")
-#load("~/Desktop/Slovenia data/Attempt2/founderGenomes_10ind.Rdata")
-
-# Try a different genom simulation
-#founderGenomes = quickHaplo(nInd = 100, nChr=16, segSites = 1000)
-#founderGenomes = runMacs(nInd = 30, nChr = 16, segSites = 1000,
-#                         species = "CATTLE")
-
+                                          nSegSites = 3200,
+                                          Ne = 3000)
 
 #Set up the SP ####
 SP <- SimParamBee$new(founderGenomes, csdChr = ifelse(16 >= 3, 3, 1), nCsdAlleles = 128)
-# Without the csd
-SP <- SimParamBee$new(founderGenomes, csdChr = NULL)
 
 SP$nWorkers <- 30
 # Track the pedigree
@@ -100,7 +87,7 @@ SP$setTrackRec(TRUE)
 
 
 # Add a SNP chip (Audrey's)
-createArray(array_name = 'BigArray', array_number = 1, nChr = 16, segSites = rep(1000, 16), nSNPPerChr = rep(261, 16), pop = founderGenomes)
+createArray(array_name = 'BigArray', array_number = 1, nChr = 16, segSites = rep(3200, 16), nSNPPerChr = rep(3200, 16), pop = founderGenomes)
 #save array
 array = colnames(pullSnpGeno(pop = founderGenomes, snpChip = 1, simParam = SP))
 write.table(array, "Bigarray.txt", sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)
@@ -122,10 +109,11 @@ SP$setVarE(varE = varE, corE = corE)
 
 
 #Create vector for array size 1728, 800, 160,16
-nSNP_array <- rbind(c(108, 4L), c(50, 3L), c(10, 2L), c(1,1L))
+nSNP_array <- rbind(c(3125, 5L), c(108, 4L), c(50, 3L), c(10, 2L), c(1,1L))
 
 #nest arrayssss
-for (n in 2:5){ #we create the first array (larger one) outside of the loop and subset it to create the others
+for (n in 2:6){ #we create the first array (larger one) outside of the loop and subset it to create the others
+  print(n)
   tmp1 = vector()
   for (chr in 1:16){
     tmp2 = sample(colnames(pullSnpGeno(pop = founderGenomes, snpChip = (n-1), chr = chr, simParam = SP)), size = nSNP_array[(n-1),1], replace = FALSE)
@@ -133,7 +121,6 @@ for (n in 2:5){ #we create the first array (larger one) outside of the loop and 
     tmp1 = c(tmp1, tmp2)
   }
   SP$addSnpChipByName(tmp1, name=paste0('SNP_', nSNP_array[n-1,2]))
-  dir.create("Data/")
   write.table(tmp1, paste0("Data/SNP_", nSNP_array[(n-1),2], "_array.txt"), sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)  
 }
 
@@ -189,6 +176,8 @@ realGeno_G$Pop = ifelse(realGeno_G$Pop1 == "queen" & realGeno_G$Pop2 == "queen",
                                ifelse(realGeno_G$Pop1 == "worker" & realGeno_G$Pop2 == "worker", "worker", "across")))
 realGeno_G$Mating = "Real"
 
+
+
 inbreeding = data.frame()
 inbreeding = rbind(inbreeding, realGeno_G)
 ##################################################################################
@@ -197,7 +186,10 @@ inbreeding = rbind(inbreeding, realGeno_G)
 # Create X rounds of inbreeding, check relatedness after each - NON BEE VERSION
 nQueens = data.frame()
 SP$nThreads = detectCores()
-plan(multisession, workers = SP$nThreads)
+plan(sequential)
+oopts <- options(future.globals.maxSize = +Inf)  ## 1.0 GB
+on.exit(options(oopts))
+f <- future({ expr })  ## Launch a future with large objects
 
 for (gen in 1:10) {
   print(paste0("Base generation is ", gen))
@@ -348,15 +340,8 @@ for (gen in 1:10) {
   }
 }
 
-save.image(file = "200000NE_HBGenome_CsdOn_20gen.RData")
-save.image(file = "10000NE_HBGenome_CsdOn_20gen.RData")
-save.image(file = "2000NE_HBGenome_CsdOn_10gen_PlusArrrays.RData")
-save.image(file = "CattleGenome_CsdOn_20gen.RData")
+save.image(file = "Data/2000NE_HBGenome_CsdOn_10gen_PlusArrays.RData")
 
-rm(list = ls())
-load("10000NE_HBGenome_CsdOn_20gen.RData")
-load("2000NE_HBGenome_CsdOn_10gen.RData")
-load("CattleGenome_CsdOn_20gen.RData")
 ##################################################################################
 # PLOT
 ##################################################################################

@@ -6,14 +6,17 @@
 #******************************************************************************
 
 ##############.  Prepping the input files ##################
-pedigree_file <- read.csv("~/Desktop/Slovenia data/April26/Simulated/worker_pedigree.csv")
+pathToPlink <- "/home/jana/bin/"
+workingDir = "/home/jana/github/lstrachan_patrilines/"
+setwd(workingDir)
+pedigree_file <- read.csv("Data/worker_pedigree.csv")
 
 Alpha_pedigree <- data.frame(id = pedigree_file$id,
                              sire = rep(0, length(pedigree_file$id)),
                              dam = pedigree_file$mother)
 
-setwd("~/Desktop/Slovenia data/April26/Simulated/Pedigree_reconstruction/AlphaAssign/")
-write.table(Alpha_pedigree, file = "Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
+dir.create("Data/AlphaAssign", showWarnings = FALSE)
+write.table(Alpha_pedigree, file = "Data/AlphaAssign/Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
 Potential_fathers <- data.frame(id = pedigree_file$id,
                                 Dpc1 = rep(unique(pedigree_file$dpc)[1], length(pedigree_file$dpc)),
@@ -21,7 +24,7 @@ Potential_fathers <- data.frame(id = pedigree_file$id,
                                 Dpc3 = rep(unique(pedigree_file$dpc)[3], length(pedigree_file$dpc)),
                                 Dpc4 = rep(unique(pedigree_file$dpc)[4], length(pedigree_file$dpc)))
 
-write.table(Potential_fathers, file = "PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
+write.table(Potential_fathers, file = "Data/AlphaAssign/PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
 
 #Get known DPQs from pedigree 
 #Known Dpcs
@@ -37,31 +40,34 @@ Dpc_known <- data.frame(id = unique(pedigree_file$dpc),
                         sire = rep(NA, length(unique(pedigree_file$dpc))))
 
 Known_Dpc <- rbind(Mothers_known, Dpc_known, Worker_known)
-write.csv(Known_Dpc, file = "Known_Dpc.csv", sep = ",", quote = F, col.names = T, row.names = F)
+write.table(Known_Dpc, file = "Data/AlphaAssign/Known_Dpc.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
 #With genotyping errors: 
+setwd("Data/Sim_WithGE")
 for (n in 1:5){ 
-  setwd("~/Desktop/Slovenia data/April26/Simulated/Data/Sim_WithGE")
-  system(paste0("./plink --file SNP_",n,"_WithGE_ACformat_QC --recode A --out SNP_",n,"_WithGE_QC_RecodeA"))
+  print(n)
+  system(paste0(pathToPlink, "plink --file SNP_",n,"_WithGE_ACformat_QC --recode A --out SNP_",n,"_WithGE_QC_RecodeA"))
   
-  AlphaPed <- read.table(paste0("~/Desktop/Slovenia data/April26/Simulated/Data/Sim_WithGE/SNP_",n,"_WithGE_QC_RecodeA.raw"), header=TRUE)
+  AlphaPed <- read.table(paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"), header=TRUE)
   AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
   AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
   
-  write.table(AlphaGeno_id, file=paste0("AlphaGeno_SNP",n,"_WithGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+  write.table(AlphaGeno_id, file=paste0(workingDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_WithGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
 }
+setwd(workingDir)
   
 #No genotyping errors:   
-  for (n in 1:5){ 
-    setwd("~/Desktop/Slovenia data/April26/Simulated/Data/Sim_NoGE")
-    system(paste0("./plink --file SNP_",n,"_NoGE_ACformat_QC --recode A --out SNP_",n,"_NoGE_QC_RecodeA"))
-    
-    AlphaPed <- read.table(paste0("~/Desktop/Slovenia data/April26/Simulated/Data/Sim_NoGE/SNP_",n,"_NoGE_QC_RecodeA.raw"), header=TRUE)
-    AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
-    AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
-    
-    write.table(AlphaGeno_id, file=paste0("AlphaGeno_SNP",n,"_NoGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
-  }  
+setwd("Data/Sim_NoGE")
+for (n in 1:5){ 
+  system(paste0(pathToPlink, "plink --file SNP_",n,"_NoGE_ACformat_QC --recode A --out SNP_",n,"_NoGE_QC_RecodeA"))
+  
+  AlphaPed <- read.table(paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"), header=TRUE)
+  AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
+  AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
+  
+  write.table(AlphaGeno_id, file=paste0(workingDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_NoGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+}
+setwd(workingDir)
 
 
 ############### Running AlphAssign in terminal################
