@@ -197,7 +197,7 @@ combine_haplotypes <- function(haplotype_matrix) {
 }
 
 # Function to convert allele codes
-convert_alleles <- function(allele) {
+convert_alleles_WithGE <- function(allele) {
   if (allele == "0") {
     return("A")
   } else if (allele == "1") {
@@ -210,18 +210,35 @@ convert_alleles <- function(allele) {
   }
 }
 
-convert_ped_genotypes <- function(ped_data) {
+convert_alleles_NoGE <- function(allele) {
+  if (allele == "1") {
+    return("A")
+  } else if (allele == "2") {
+    return("C")
+  } else {
+    return(allele)
+  }
+}
+
+
+convert_ped_genotypes <- function(ped_data, GE = NULL) {
   # Applying the conversion function to each allele in the genotype columns
   genotype_data <- ped_data[, 7:ncol(ped_data)]
   
+  if(GE == TRUE){
   # Convert each allele using the sapply function
-  corrected_genotype_data <- apply(genotype_data, 2, function(column) sapply(column, convert_alleles))
+  corrected_genotype_data <- apply(genotype_data, 2, function(column) sapply(column, convert_alleles_WithGE))
+  }
+  if(GE == FALSE){
+  corrected_genotype_data <- apply(genotype_data, 2, function(column) sapply(column, convert_alleles_NoGE))
+  }
   
   # Replace the original genotype data with the converted data
   ped_data[, 7:ncol(ped_data)] <- corrected_genotype_data
   
   return(ped_data)
 }
+
 
 
 dir.create("Data/Sim_NoGE")
@@ -294,10 +311,10 @@ for (n in 1:nrow(nSNP_array)){
   
   #Need to modify the ped files for BEAGLE (genotypes need to being the 0ACGT format not 0,1,2,9) 
   print("Converting to AC format for Beagle")
-  NoGE_ped_AC <- convert_ped_genotypes(ped_data = NoGE_ped)
+  NoGE_ped_AC <- convert_ped_genotypes(ped_data = NoGE_ped, GE = FALSE)
   write.table(NoGE_ped_AC, file = paste0("Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat.ped"), quote = FALSE, sep = " ", row.names = FALSE, col.names = F)
   system(paste0("cp Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE.map Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat.map")) 
-  WithGE_ped_AC <- convert_ped_genotypes(ped_data = GE_ped)
+  WithGE_ped_AC <- convert_ped_genotypes(ped_data = GE_ped, GE = TRUE)
   write.table(WithGE_ped_AC, file = paste0("Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat.ped"), quote = FALSE, sep = " ", row.names = FALSE, col.names = F)
   system(paste0("cp Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE.map Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat.map"))
   
