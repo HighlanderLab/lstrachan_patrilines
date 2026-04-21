@@ -1,6 +1,10 @@
 #Run AlphaAssign.sh
 
 snp_array=$1
+in_dir=$2
+out_dir=$3
 
-source ~/Desktop/Slovenia_data/April26/Pedigree_assignment_softwares/AlphaAssign/AlphaAssign/bin/activate
-AlphaAssign -genotypes ${snp_array}.txt -potentialsires PotentialFathers.list -pedigree Pedigree.txt -out ${snp_array} -runtype likelihood
+
+source ~/bin/anaconda3/etc/profile.d/conda.sh
+conda activate AlphaAssign
+AlphaAssign -genotypes ${in_dir}/${snp_array}.txt -potentialsires ${in_dir}/PotentialFathers.list -pedigree ${in_dir}/Pedigree.txt -out ${out_dir}/${snp_array} -runtype likelihood
