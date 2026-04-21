@@ -6,10 +6,12 @@ library(Eagle)
 library(tidyr)
 library(dplyr)
 
+pathToPlink <- "/home/jana/bin/"
+workingDir = "/home/jana/github/lstrachan_patrilines/"
+setwd(workingDir)
 
-setwd("~/Desktop/Slovenia data/April26/Real/")
-Slov_raw_ped <- read.table("newPat.ped")
-Slov_raw_map <- read.table("newPat.map")
+Slov_raw_ped <- read.table("Data/Real_data/newPat.ped")
+Slov_raw_map <- read.table("Data/Real_data/newPat.map")
 #Slov map is in the wrong format so we need to fix it first
 Fix_map <- Slov_raw_map[,2]
 
@@ -128,14 +130,11 @@ Slov_map_filtered_chrom <- Slov_map_filtered %>%
     TRUE ~ 0
   ))
 
-View(Slov_map_filtered_chrom)
-
 
 Slov_map_filtered_chrom <- Slov_map_filtered_chrom[, c("Chromosome", "GenDis", "markerID", "Position")]
 
 # --- Save Final Map File --- (must be the same name as the ped file to work in PLINK)
-setwd("~/Desktop/Slovenia data/April26/Real/")
-write.table(Slov_map_filtered_chrom, file = "Slov_fM_AC.map", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
+write.table(Slov_map_filtered_chrom, file = "Data/Real_data/Slov_fM_AC.map", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
 
 
 
@@ -159,15 +158,16 @@ Slov_ped_filtered_AC <- convert_ped_AB_to_AC(Slov_ped_filtered)
 Slov_ped_filtered_AC[2:10, 7:20]
 
 
-write.table(Slov_ped_filtered_AC, file = "Slov_fM_AC.ped", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
+write.table(Slov_ped_filtered_AC, file = "Data/Real_data/Slov_fM_AC.ped", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
 
 
 #### ---- PLINK quality control ###################################################################################################
+setwd("Data/Real_data")
 {# Step 1: Quality control with PLINK
-  system("./plink --file Slov_fM_AC --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_AC_QC")
+  system(paste0(pathToPlink, "plink --file Slov_fM_AC --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_AC_QC"))
 
   # Step 2: Convert to VCF
-  system("./plink --bfile Slov_fM_AC_QC --recode vcf --out Slov_fM_AC_QC")
+  system(paste0(pathToPlink, "plink --bfile Slov_fM_AC_QC --recode vcf --out Slov_fM_AC_QC"))
   
   # Step 3: Sort and index the VCF
   system("bcftools sort Slov_fM_AC_QC.vcf -Oz -o Slov_fM_AC_QC_sorted.vcf.gz")
@@ -181,6 +181,7 @@ write.table(Slov_ped_filtered_AC, file = "Slov_fM_AC.ped", quote = FALSE, col.na
   system("tabix -p vcf Slov_fM_AC_QC_biallelic.vcf.gz")
   system("bcftools norm -d all Slov_fM_AC_QC_biallelic.vcf.gz -Oz -o Slov_fM_AC_QC_noDupPos.vcf.gz")
   system("tabix -p vcf Slov_fM_AC_QC_noDupPos.vcf.gz")
+  #TODO: Add the manual transformtion from VCF to Ped and Map
   
 }  
 
