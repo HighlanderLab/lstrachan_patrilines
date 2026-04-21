@@ -316,24 +316,3 @@ for (n in 1:nrow(nSNP_array)){
   
   
 }
-
-
-# Convert alleles of the Slovenian data
-#Slov_ped_filtered2 <- convert_ped_genotypes(ped_data = Slov_ped_filtered)
-
-
-
-#Now you can put things into plink for quality control 
-
-# take the corrected ped file and the map file:
-system(paste0("./plink --file SNP_", nSNP_array[n,2], "_NoGE_ACformat --make-bed  --geno 0.1 --mind 0.1 --maf 0.01 --out SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC")) #quality control
-system(paste0("./plink --file SNP_", nSNP_array[n,2], "_WithGE_ACformat --make-bed  --geno 0.1 --mind 0.1 --maf 0.01 --out SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC")) #quality control
-
-system(paste0("./plink --bfile SNP_", nSNP_array[n,2], "_NoGE_ACformat  --recode vcf --out SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC"))   #make a vcf of the QC for phasing
-system(paste0("./plink --bfile SNP_", nSNP_array[n,2], "_WithGE_ACformat  --recode vcf --out SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC"))   #make a vcf of the QC for phasing
-
-
-system(paste0("./plink --bfile SNP_", nSNP_array[n,2], "_NoGE_ACformat  --recode --out SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC "))  #get the ped and map files back
-system(paste0("./plink --bfile SNP_", nSNP_array[n,2], "_WithGE_ACformat --recode --out SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC"))   #get the ped and map files back
-
-
