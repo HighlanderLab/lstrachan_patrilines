@@ -138,5 +138,74 @@ Process_AlphaAssign_output <- function(GE = NULL){
 NoGE_Alpha_output <- Process_AlphaAssign_output(GE = FALSE)
 WithGE_Alpha_output <- Process_AlphaAssign_output(GE = TRUE)
 
-AlphaAssign_Summary <- rbind(NoGE_Alpha_output, WithGE_Alpha_output)
+
+#******************************************************************************
+#                     2. REAL DATA
+#******************************************************************************
+
+##############.  Prepping the input files ##################
+pedigree_file <- read.table("~/Desktop/Slovenia_data/April26/Real/Pedigree_file_forBeagle.txt")
+pedigree_file <- pedigree_file[,2:4]
+colnames(pedigree_file) <- c("id", "sire", "dam")
+
+Alpha_pedigree <- data.frame(id = pedigree_file$id,
+                             sire = pedigree_file$sire,
+                             dam = pedigree_file$dam)
+
+setwd("~/Desktop/Slovenia_data/April26/Real/AlphaAssign/")
+write.table(Alpha_pedigree, file = "Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
+
+SNP_samples <- read.csv("~/Desktop/Slovenia_data/April26/Real/SNP_samples_2022.csv", header= T)
+SNP_samples <- SNP_samples[SNP_samples$biotype == "dpc", ]
+SNP_samples <- SNP_samples$snp_id
+
+n <- nrow(pedigree_file)
+
+Potential_fathers <- data.frame(
+  id = pedigree_file$id,
+  Dpc1 = rep(SNP_samples[1], n),
+  Dpc2 = rep(SNP_samples[2], n),
+  Dpc3 = rep(SNP_samples[3], n),
+  Dpc4 = rep(SNP_samples[4], n),
+  Dpc5 = rep(SNP_samples[5], n)
+)
+write.table(Potential_fathers, file = "PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
+
+
+#Recode quality controlled files for AlphaAssign
+system(paste0("./plink --file Slov_fM_AC_QC_noDupPos --recode A --out Slov_Alpha_RecodeA"))
+
+#Process the genotypes
+AlphaPed <- read.table(paste0("~/Desktop/Slovenia_data/April26/Real/Not phased/Slov_Alpha_RecodeA.raw"), header=TRUE)
+AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
+AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
+
+write.table(AlphaGeno_id, file=paste0("AlphaGeno_Real.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+
+############### Running AlphAssign in terminal################
+#create a for loop here for all of the SNP array sizes <-------------- 
+system(paste0("bash ~/Desktop/Slovenia_data/April26/RunAlphaAssign.sh AlphaGeno_Real"))
+
+
+#Summarise the dataset     
+Alpha_output <- read.table("AlphaGeno_Real.txt", header = TRUE)
+    
+    Sires_assigned <- Alpha_output[Alpha_output$chosen == 1, ]
+    nSires_assigned <- nrow(Sires_assigned)
+    
+    Offspring_and_candidateParent <- Sires_assigned[, c(1,2)]
+    colnames(Offspring_and_candidateParent) <- c("id", "sire")
+    
+
+    Real_Alpha_df <- data.frame(
+      Test = "Real",
+      nOffspring = nrow(Worker_known),
+      SNP_group = "1.7k",
+      nSires_assigned = nSires_assigned,
+      nCorrect_sires = NA,
+      Software = "AlphaAssign")
+
+
+AlphaAssign_Summary <- rbind(NoGE_Alpha_output, WithGE_Alpha_output, Real_Alpha_df)
 write.table(AlphaSummary, file = "Alpha_summary.txt", sep = " ", quote = F, col.names = T, row.names = F)
+    
