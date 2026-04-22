@@ -223,51 +223,65 @@ write.table(Alpha_pedigree_sim_50K_withGE, file = paste0(workingDir, "Data/Alpha
 #******************************************************************************
 
 ##############.  Prepping the input files ##################
+rm(list = ls()) #Lets clear workspace just incase something sneaks in 
+pathToPlink <- "~/Desktop/PLINK/./"
+workingDir = "~/Desktop/lstrachan_patrilines"
 setwd(workingDir)
-pedigree_file_real <- read.table("Data/Real_data/Slov_fM_AC.ped")[, 2:4]
-colnames(pedigree_file) <- c("id", "sire", "dam")
+dir.create("Data/Real_data/AlphaAssign")
 
-Alpha_pedigree_real <- data.frame(id = pedigree_file$id,
-                             sire = pedigree_file$sire,
-                             dam = pedigree_file$dam)
+pedigree_file_real <- read.csv("Data/Real_data/Real_Data_pedigree.csv")
+colnames(pedigree_file_real) <- c("id", "sire", "dam")
+
+removed_queen_id <- "B0003710" #Id of the queen removed during QC 
+pedigree_file_real <- pedigree_file_real[pedigree_file_real$id != removed_queen_id,]
+pedigree_file_real <- pedigree_file_real[pedigree_file_real$dam != removed_queen_id,] #remove all of her offspring from the pedigree too
 
 
-write.table(Alpha_pedigree, file = "Data/Real_data/Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
+Alpha_pedigree_real <- data.frame(id = pedigree_file_real$id,
+                             sire = pedigree_file_real$sire,
+                             dam = pedigree_file_real$dam)
+
+
+write.table(Alpha_pedigree_real, file = "Data/Real_data/AlphaAssign/Alpha_Pedigree_real.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
 SNP_samples <- read.csv("Data/Real_data/SNP_samples_2022.csv", header= T)
 workers_IDs_beforeQC <- SNP_samples$snp_id[SNP_samples$biotype == "worker"]
 SNP_samples <- SNP_samples[SNP_samples$biotype == "dpc", ]
 SNP_samples <- SNP_samples$snp_id
 
-n <- nrow(pedigree_file)
+n <- nrow(pedigree_file_real)
 
 Potential_fathers <- data.frame(
-  id = pedigree_file$id,
+  id = pedigree_file_real$id,
   Dpc1 = rep(SNP_samples[1], n),
   Dpc2 = rep(SNP_samples[2], n),
   Dpc3 = rep(SNP_samples[3], n),
   Dpc4 = rep(SNP_samples[4], n),
   Dpc5 = rep(SNP_samples[5], n)
 )
-write.table(Potential_fathers, file = "Data/Real_data/PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
+write.table(Potential_fathers, file = "Data/Real_data/AlphaAssign/PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
 
 
 #Recode quality controlled files for AlphaAssign
-setwd("Data/Real_data")
-system(paste0(pathToPlink, "plink --vcf Slov_fM_AC_QC_noDupPos.vcf.gz --recode A --out Slov_Alpha_RecodeA"))
-setwd(workingDir))
+#Lets move the vcf file we need for AlphaAssign into the folder to not get mixed up with filenames
+file.copy(
+  from = "Data/Real_data/Slov_fM_AC_QC_filtered.vcf.gz",
+  to   = "Data/Real_data/AlphaAssign/Slov_fM_AC_QC_filtered.vcf.gz"
+)
+setwd("Data/Real_data/AlphaAssign")
+system(paste0(pathToPlink, "plink --vcf Slov_fM_AC_QC_filtered.vcf.gz --recode A --out Slov_Alpha_RecodeA"))
 
 #Process the genotypes
 AlphaPed <- read.table(paste0("Slov_Alpha_RecodeA.raw"), header=TRUE)
 AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
 AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
 
-setwd(workingDir)
-write.table(AlphaGeno_id, file=paste0("Data/Real_data/AlphaGeno_RealData.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+write.table(AlphaGeno_id, file=paste0("AlphaGeno_RealData.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
 
 ############### Running AlphAssign in terminal################
+setwd(workingDir)
 #create a for loop here for all of the SNP array sizes <-------------- 
-system(paste0("bash ScriptsApril26/RunAlphaAssign_RealData.sh AlphaGeno_RealData ", workingDir, "Data/Real_data/ ", workingDir, "Outputs/AlphaAssign/"))
+system(paste0("bash ScriptsApril26/RunAlphaAssign_RealData.sh AlphaGeno_RealData ", workingDir, "/Data/Real_data/AlphaAssign ", workingDir, "/Outputs/AlphaAssign"))
 
 
 #Summarise the dataset     

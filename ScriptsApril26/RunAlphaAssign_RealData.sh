@@ -5,6 +5,7 @@ in_dir=$2
 out_dir=$3
 
 
-source ~/bin/anaconda3/etc/profile.d/conda.sh
+#source ~/bin/anaconda3/etc/profile.d/conda.sh jana's source 
+source /usr/local/Caskroom/miniconda/base/etc/profile.d/conda.sh
 conda activate AlphaAssign
-AlphaAssign -genotypes ${in_dir}/${snp_array}.txt -potentialsires ${in_dir}/PotentialFathers.list -pedigree ${in_dir}/Pedigree.txt -out ${out_dir}/${snp_array} -runtype likelihood
+AlphaAssign -genotypes ${in_dir}/${snp_array}.txt -potentialsires ${in_dir}/PotentialFathers.list -pedigree ${in_dir}/Alpha_Pedigree_real.txt -out ${out_dir}/${snp_array} -runtype likelihood
