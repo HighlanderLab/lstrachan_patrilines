@@ -153,3 +153,70 @@ save(SequoiaOutPut, file = "SequoiaOutPut_Real.Rdata")
 
 rm(... = map, ped, SNP_names, SNP_names_new, Sequoia_ped, SequoiaOutPut)
 
+
+
+#****** 3. SUMMARISE OUTPUTS *******************************************************
+setwd(workingDir)
+#Load Simulated files: 
+#•• NO GE ••
+results_list <- list()
+for (n in 1:5){
+  SequoiaOutPut <- load("Data/Sequoia/SequoiaOutPut_SNP",n,"_NoGE.Rdata")
+  Known_Dpc <- read.csv("Data/Sequoia/Known_Dpc.csv")
+  Known_Dpc <- as.data.frame(Known_Dpc)
+  
+  PC_par <- PedCompare(Ped1 = Known_Dpc[, c("id", "dam", "sire")],
+                       Ped2 = SequoiaOutPut$PedigreePar)
+  
+  nSires_assigned <- sum(!is.na(SequoiaOutPut$PedigreePar$sire))
+  nCorrect_sires <- sum(PC_par[["MergedPed"]][["sire.class"]] == "Match")
+  
+  Sequoia_file <- data.frame(Test = "NoGE",
+                             nOffspring = 240,
+                             SNP_group = n,
+                             nSires_assigned = nSires_assigned,
+                             nCorrect_sires = nCorrect_sires,
+                             Software = "Sequoia")
+  results_list[[n]] <- df
+}
+NoGE_SequoiaTable <- do.call(rbind, results_list)
+
+
+#•• WITH GE ••
+results_list <- list()
+for (n in 1:5){
+  SequoiaOutPut <- load("Data/Sequoia/SequoiaOutPut_SNP",n,"_WithGE.Rdata")
+  Known_Dpc <- read.csv("Data/Sequoia/Known_Dpc.csv")
+  Known_Dpc <- as.data.frame(Known_Dpc)
+  
+  PC_par <- PedCompare(Ped1 = Known_Dpc[, c("id", "dam", "sire")],
+                       Ped2 = SequoiaOutPut$PedigreePar)
+  
+  nSires_assigned <- sum(!is.na(SequoiaOutPut$PedigreePar$sire))
+  nCorrect_sires <- sum(PC_par[["MergedPed"]][["sire.class"]] == "Match")
+  
+  Sequoia_file <- data.frame(Test = "WithGE",
+                             nOffspring = 240,
+                             SNP_group = n,
+                             nSires_assigned = nSires_assigned,
+                             nCorrect_sires = nCorrect_sires,
+                             Software = "Sequoia")
+  results_list[[n]] <- df
+}
+WithGE_SequoiaTable <- do.call(rbind, results_list)
+
+
+#•• REAL DATA •• 
+SequoiaOutPut <- load("Data/Sequoia/SequoiaOutPut_Real.Rdata")
+nSires_assigned <- sum(!is.na(SequoiaOutPut$PedigreePar$sire))
+
+Real_SequoiaTable <- data.frame(Test = "Real",
+                           nOffspring = 235,
+                           SNP_group = 4,
+                           nSires_assigned = nSires_assigned,
+                           nCorrect_sires = NA,
+                           Software = "Sequoia")
+
+Sequoia_Summary <- rbind(Real_SequoiaTable, NoGE_SequoiaTable, WithGE_SequoiaTable)
+Sequoia_Summary
+
