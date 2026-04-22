@@ -16,7 +16,10 @@ library(genio)
 
 #setwd("~/github/lstrachan_patrilines/")
 
-load("~/Downloads/2000NE_HBGenome_CsdOn_10gen_lusArrrays.RData")
+pathToPlink="/home/jana/bin/"
+workingDir = "/home/jana/github/lstrachan_patrilines/"
+setwd(workingDir)
+load("Data/FounderPops/2000NE_HBGenome_CsdOn_10gen_PlusArrays.RData")
 
 matingStation_drones <- createDrones(DPQs, nInd = nDronesPerQueen)
 
@@ -64,24 +67,24 @@ for (i in 1:nrow(col)) {
   }
 }
 col$dpc <- dpc_values
-setwd("~/Desktop/Slovenia data/April26/Simulated")
-write_csv(col, file = "worker_pedigree.csv", col_names = TRUE)
+
+write_csv(col, file = "Data/worker_pedigree.csv", col_names = TRUE)
 
 
 #Save the general files at this point (just incase we need to come back to them)
-save(queen_colonies, file = "queen_colonies.Rdata")
-save(DPQs, file = "DPQs.Rdata")
-save(matingStation_drones, file = "matingStation_drones.Rdata")
-save(fathers, file = "real_fathers.Rdata")
-save(PopMerged, file = "Pop_withFathers.Rdata")
-save(PopMerged_noFathers, file = "Pop_withNoFathers.Rdata")
-save(SP, file = "SP_object.Rdata")
+save(queen_colonies, file = "Data/queen_colonies.Rdata")
+save(DPQs, file = "Data/DPQs.Rdata")
+save(matingStation_drones, file = "Data/matingStation_drones.Rdata")
+save(fathers, file = "Data/real_fathers.Rdata")
+save(PopMerged, file = "Data/Pop_withFathers.Rdata")
+save(PopMerged_noFathers, file = "Data/Pop_withNoFathers.Rdata")
+save(SP, file = "Data/SP_object.Rdata")
 
 #Pull out the whole GenMap for this simulation (all of the sexes)
 GenMap_full <- getGenMap(SP, sex = "A")
 GenMap_femaleOnly <- getGenMap(SP, sex = "F")
-write.table(GenMap_full, file = "GenMap_full.txt", sep = " ", quote = F, col.names = T, row.names = F)
-write.table(GenMap_femaleOnly, file = "GenMap_femaleOnly.txt", sep = " ", quote = F, col.names = T, row.names = F)
+write.table(GenMap_full, file = "Data/GenMap_full.txt", sep = " ", quote = F, col.names = T, row.names = F)
+write.table(GenMap_femaleOnly, file = "Data/GenMap_femaleOnly.txt", sep = " ", quote = F, col.names = T, row.names = F)
 
 
 #We are showing genotyping errors and non-genotyping error version
@@ -131,7 +134,7 @@ switchToNA <- function(genoErr) {
 }
 
 #nest arrayssss
-for (n in 2:5){ #we create the first array (larger one) outside of the loop and subset it to create the others
+for (n in 2:6){ #we create the first array (larger one) outside of the loop and subset it to create the others
   tmp1 = vector()
   for (chr in 1:16){
     tmp2 = sample(colnames(pullSnpGeno(pop = founderGenomes, snpChip = (n-1), chr = chr, simParam = SP)), size = nSNP_array[(n-1),1], replace = FALSE)
@@ -139,7 +142,7 @@ for (n in 2:5){ #we create the first array (larger one) outside of the loop and 
     tmp1 = c(tmp1, tmp2)
   }
   SP$addSnpChipByName(tmp1, name=paste0('SNP_', nSNP_array[n-1,2]))
-  write.table(tmp1, paste0("SNP_", nSNP_array[(n-1),2], "_array.txt"), sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)
+  write.table(tmp1, paste0("Data/SNP_", nSNP_array[(n-1),2], "_array.txt"), sep = " ", na = "NA", quote = F, row.names = FALSE, col.names = FALSE)
 }
 
 #this function will go through the genotypes with errors and use the true haplotypes as a reference for the genotype with value 1.
@@ -322,14 +325,14 @@ for (n in 1:nrow(nSNP_array)){
   #Now you can put things into plink for quality control 
   print("Running PLINK QC on AC format files")
   # take the corrected ped file and the map file:
-  system(paste0("./plink --file Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat --make-bed  --geno 0.1 --mind 0.1 --maf 0.01 --out Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC")) #quality control
-  system(paste0("./plink --file Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat --make-bed  --geno 0.1 --mind 0.1 --maf 0.01 --out Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC")) #quality control
-  
-  system(paste0("./plink --bfile Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC  --recode vcf --out Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC"))   #make a vcf of the QC for phasing
-  system(paste0("./plink --bfile Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC --recode vcf --out Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC"))   #make a vcf of the QC for phasing
-  
-  system(paste0("./plink --bfile Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC  --recode --out Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC "))  #get the ped and map files back
-  system(paste0("./plink --bfile Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC --recode --out Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC"))   #get the ped and map files back
-  
-  
+  system(paste0(pathToPlink,"/plink --file Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat --make-bed  --geno 0.1 --mind 0.1 --maf 0.01 --out Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC")) #quality control
+  system(paste0(pathToPlink,"/plink --file Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat --make-bed  --geno 0.1 --mind 0.1 --maf 0.01 --out Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC")) #quality control
+
+  system(paste0(pathToPlink,"/plink --bfile Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC  --recode vcf --out Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC"))   #make a vcf of the QC for phasing
+  system(paste0(pathToPlink,"/plink --bfile Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC --recode vcf --out Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC"))   #make a vcf of the QC for phasing
+
+  system(paste0(pathToPlink,"/plink --bfile Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC  --recode --out Data/Sim_NoGE/SNP_", nSNP_array[n,2], "_NoGE_ACformat_QC "))  #get the ped and map files back
+  system(paste0(pathToPlink,"/plink --bfile Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC --recode --out Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_ACformat_QC"))   #get the ped and map files back
+
+
 }

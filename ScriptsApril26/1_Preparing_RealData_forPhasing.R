@@ -187,24 +187,6 @@ setwd("Data/Real_data")
 
 
 
-#Now to make the pedigree file for Beagle 4 to phased more accurately #################################### 
-# Family ID: A unique identifier for the family.
-# Individual ID: A unique identifier for the individual within the family.
-# Paternal ID: The Individual ID of the father (0 if father is unknown).
-# Maternal ID: The Individual ID of the mother (0 if mother is unknown).
-# Sex: Sex of the individual coded as 1 = male, 2 = female, and 0 = unknown.
-# Phenotype: The phenotype for the individual (commonly used for affection status, with 1 = unaffected, 2 = affected, and 0/-9 = unknown).
-
-Pedigree_file_forBeagle <- Slov_ped_filtered_AC[,c(1:6)]
-colnames(Pedigree_file_forBeagle) <- c("FamilyID", "IndID", "PaternalID","MaternalID", "Sex", "Phenotype")
-write.table(Pedigree_file_forBeagle, file = "Pedigree_file_forBeagle.txt", col.names = F, row.names = F, quote = F, sep = " ")
-
-
-
-
-
-
-
 
 
 #******* Don't know what this is yet - May make sense during phasing *************
