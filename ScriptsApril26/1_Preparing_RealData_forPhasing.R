@@ -9,12 +9,15 @@ library(dplyr)
 
 pathToPlink <- "/home/jana/bin/"
 workingDir <- "/home/jana/github/lstrachan_patrilines/"
-pathToPlink <- "~/Desktop/PLINK/./"
-workingDir = "~/Desktop/lstrachan_patrilines"
+#pathToPlink <- "~/Desktop/PLINK/./"
+#workingDir = "~/Desktop/lstrachan_patrilines"
 setwd(workingDir)
+source("ScriptsApril26/AB_to_12.R")
+
 
 Slov_raw_map <- read.table("Data/Real_data/newPat.map")
 Slov_raw_ped <- read.table("Data/Real_data/newPat.ped")
+
 
 #Fix the pedigree *********************************
 Real_SNP_samples <- read.csv("Data/Real_data/SNP_samples_2022.csv")
@@ -43,38 +46,19 @@ extract_parts <- function(x) {
   parts <- unlist(strsplit(x, "[._]"))
   chromosome <- paste(parts[2], paste(parts[3], parts[4], sep="."), sep="_")
   position <- as.numeric(parts[5])
-  data.frame(Chromosome = chromosome, Position = position, stringsAsFactors = FALSE)
+  ref_allele <- parts[6]
+  data.frame(Chromosome = chromosome, Position = position, RefAllele = ref_allele, stringsAsFactors = FALSE)
 }
 
 # Organise the map (we don't have the Genetic distance colummn yet and will add that at the end)
-Slov_map_organised <- do.call(rbind, lapply(Fix_map, extract_parts))
-Slov_map_organised$markerID <- Fix_map
+Slov_map_refAll <- do.call(rbind, lapply(Fix_map, extract_parts))
+Slov_map_refAll$markerID <- Fix_map
 
-#we need to add the column names to the pedigree so we get rid of the right columns 
-transformed_list <- list()
+AB_to_12(ped_file = "Data/Real_data/newPat.ped", map_ref_file = "Data/Real_data/Slov_map_refAllele.map", output_file_prefix = "Data/Real_data/newPat_12")
 
-# Loop through each row in the dataframe
-for (i in 1:nrow(Slov_map_organised)) {
-  # Get the current row
-  current_row <- Slov_map_organised[i, ]
-  
-  # Create two copies of the current row with modified Chromosome values
-  row_copy_1 <- current_row
-  row_copy_2 <- current_row
-  row_copy_1$markerID <- paste(current_row$markerID, "1", sep = "_")
-  row_copy_2$markerID <- paste(current_row$markerID, "2", sep = "_")
-  
-  # Add the modified rows to the list
-  transformed_list[[length(transformed_list) + 1]] <- row_copy_1
-  transformed_list[[length(transformed_list) + 1]] <- row_copy_2
-}
-
-# Convert the list back to a dataframe
-Long_map_file <- do.call(rbind, transformed_list)
-
-Chr_IDs_forPed <- Long_map_file$markerID
-#Make these the colnames for the ped file 
-colnames(Slov_raw_ped)[7:ncol(Slov_raw_ped)] <- Chr_IDs_forPed
+Slov_map <- read.table("Data/Real_data/newPat_12.map")
+colnames(Slov_map) <- c("Chromosome", "markerID", "GeneticDistance", "Position")
+Slov_ped <- read.table("Data/Real_data/newPat_12.ped")
 
 
 # Next we only want chromosomes beginning with NC (NW are those with unknown chromomsomes)
@@ -84,50 +68,17 @@ filter_chromosome_nc <- function(df) {
   return(filtered_df)
 }
 
-Slov_map_filtered <- filter_chromosome_nc(Slov_map_organised)
+Slov_map_filtered <- filter_chromosome_nc(Slov_map)
+# Change the chromosome number
+#Slov_map_filtered$Chromosome <- gsub()
 nrow(Slov_map_filtered)
 
-filtered_list <- list()
 
-# Loop through each row in the dataframe
-for (i in 1:nrow(Slov_map_filtered)) {
-  # Get the current row
-  current_row <- Slov_map_filtered[i, ]
-  
-  # Create two copies of the current row with modified Chromosome values
-  row_copy_1 <- current_row
-  row_copy_2 <- current_row
-  row_copy_1$markerID <- paste(current_row$markerID, "1", sep = "_")
-  row_copy_2$markerID <- paste(current_row$markerID, "2", sep = "_")
-  
-  # Add the modified rows to the list
-  filtered_list[[length(filtered_list) + 1]] <- row_copy_1
-  filtered_list[[length(filtered_list) + 1]] <- row_copy_2
-}
+#Slov_ped_filtered <- filter_columns_nc(Slov_raw_ped)
+#ncol(Slov_ped_filtered)
+write.table(unique(Slov_map_filtered$markerID), "Data/Real_data/Slov_map_filtered_markers.csv", row.names = FALSE, quote=F, col.names = FALSE)
 
-# Convert the list back to a dataframe
-Long_file <- do.call(rbind, filtered_list)
-Chr_IDs <- Long_file$markerID
-
-#Do the same for the ped file with the column names 
-filter_columns_nc <- function(df) {
-  
-  # Filter the dataframe to keep only those columns
-  filtered_df <- df[, Chr_IDs]
-  
-  return(filtered_df)
-}
-
-Slov_ped_filtered <- filter_columns_nc(Slov_raw_ped)
-ncol(Slov_ped_filtered)
-#We just got rid of the start of the ped file so lets pop that back in
-Slov_ped_filtered <- cbind(Slov_raw_ped[,c(1:6)], Slov_ped_filtered)
-ncol(Slov_ped_filtered) #just check the six were added ok
-
-#These filtered files SHOULD now be alright to save and put into PLINK for QC and phasing 
-#Add in the genetic distance column with 0 for missing 
-Slov_map_filtered$GenDis <- rep(0)
-Slov_map_filtered <- Slov_map_filtered[,c(1,3,4,2)] #put it in the right order for plink 
+system(paste0(pathToPlink, "plink --file Data/Real_data/newPat_12 --extract Data/Real_data/Slov_map_filtered_markers.csv --recode --allow-extra-chr --out Data/Real_data/Slov_fM"))
 
 
 # ---  Map Chromosomes numerically ---
@@ -154,79 +105,81 @@ Slov_map_filtered_chrom <- Slov_map_filtered %>%
   ))
 
 
-Slov_map_filtered_chrom <- Slov_map_filtered_chrom[, c("Chromosome", "GenDis", "markerID", "Position")]
+Slov_map_filtered_chrom <- Slov_map_filtered_chrom[, c("Chromosome", "GeneticDistance", "markerID", "Position")]
 
 # --- Save Final Map File --- (must be the same name as the ped file to work in PLINK)
-write.table(Slov_map_filtered_chrom, file = "Data/Real_data/Slov_fM_AC.map", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
+write.table(Slov_map_filtered_chrom, file = "Data/Real_data/Slov_fM.map", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
 
 
 
 ## ped file is in 0/A/B format which can't be read by Beagle. Needs to be changed to 0/A/C
 
 # Function to convert allele codes
-convert_ped_AB_to_AC <- function(ped_df) {
-  ped_df[, 7:ncol(ped_df)] <- apply(
-    ped_df[, 7:ncol(ped_df)],
-    2,
-    function(col) {
-      col[col == "B"] <- "C"
-      col
-    }
-  )
-  return(ped_df)
-}
+# convert_ped_AB_to_AC <- function(ped_df) {
+#   ped_df[, 7:ncol(ped_df)] <- apply(
+#     ped_df[, 7:ncol(ped_df)],
+#     2,
+#     function(col) {
+#       col[col == "B"] <- "C"
+#       col
+#     }
+#   )
+#   return(ped_df)
+# }
 
 
-Slov_ped_filtered_AC <- convert_ped_AB_to_AC(Slov_ped_filtered)
-write.table(Slov_ped_filtered_AC, file = "Data/Real_data/Slov_fM_AC.ped", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
+# Slov_ped_filtered_AC <- convert_ped_AB_to_AC(Slov_ped_filtered)
+# write.table(Slov_ped_filtered_AC, file = "Data/Real_data/Slov_fM_AC.ped", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
 
 
 #### ---- PLINK quality control ###################################################################################################
 setwd(paste0(workingDir, "Data/Real_data"))
 
 # Step 1: Quality control with PLINK
-system(paste0(pathToPlink, "plink --file Slov_fM_AC --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_AC_QC"))
+system(paste0(pathToPlink, "plink --file Slov_fM --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_QC"))
 
-system(paste0(pathToPlink, "plink --bfile Slov_fM_AC_QC --recode --out Slov_fM_AC_QC"))
-Slov_fm_AC_QC_ped <- read.table("Slov_fM_AC_QC.ped")
+system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --recode --out Slov_fM_QC"))
+Slov_fm_QC_ped <- read.table("Slov_fM_QC.ped")
 #Identify which queen was removed 
-ped_id <- Slov_fm_AC_QC_ped$V2
+ped_id <- Slov_fm_QC_ped$V2
 #which queen_id is not in ped_id?
 removed_queen <- setdiff(queen_ids, ped_id)
 #Which workers are the offspring of the removed queen? 
-workers_to_remove <- Slov_fm_AC_QC_ped[Slov_fm_AC_QC_ped$V4 %in% removed_queen,]
-
+real_ped = read.csv(paste0(workingDir, "/Data/Real_data/Real_Data_pedigree.csv"), header = TRUE, stringsAsFactors = FALSE)
+workers_to_remove <- data.frame(Fam = "AMEL", ID = real_ped$ID[real_ped$MID %in% removed_queen])
+write.table(workers_to_remove, "workers_to_remove.txt", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
+system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --remove workers_to_remove.txt --recode --out Slov_fM_QC"))   
 
 # Step 2: Convert to VCF
-system(paste0(pathToPlink, "plink --bfile Slov_fM_AC_QC --recode vcf --out Slov_fM_AC_QC"))
+# system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --recode vcf --out Slov_fM_QC"))
 
-# Step 3: Sort and index the VCF
-system("bcftools sort Slov_fM_AC_QC.vcf -Oz -o Slov_fM_AC_QC_sorted.vcf.gz")
-system("tabix -p vcf Slov_fM_AC_QC_sorted.vcf.gz")
+# # Step 3: Sort and index the VCF
+# system("bcftools sort Slov_fM_AC_QC.vcf -Oz -o Slov_fM_AC_QC_sorted.vcf.gz")
+# system("tabix -p vcf Slov_fM_AC_QC_sorted.vcf.gz")
 
-# Step 3.5: Check for duplicate positions
-system("bcftools query -f '%CHROM\\t%POS\\n' Slov_fM_AC_QC_sorted.vcf.gz | sort | uniq -d")
+# # Step 3.5: Check for duplicate positions
+# system("bcftools query -f '%CHROM\\t%POS\\n' Slov_fM_AC_QC_sorted.vcf.gz | sort | uniq -d")
 
-# Step 3.6: Normalize and remove duplicate records
-system("bcftools norm -m -any Slov_fM_AC_QC_sorted.vcf.gz -Oz -o Slov_fM_AC_QC_biallelic.vcf.gz")
-system("tabix -p vcf Slov_fM_AC_QC_biallelic.vcf.gz")
-system("bcftools norm -d all Slov_fM_AC_QC_biallelic.vcf.gz -Oz -o Slov_fM_AC_QC_noDupPos.vcf.gz")
-system("tabix -p vcf Slov_fM_AC_QC_noDupPos.vcf.gz")
+# # Step 3.6: Normalize and remove duplicate records
+# system("bcftools norm -m -any Slov_fM_AC_QC_sorted.vcf.gz -Oz -o Slov_fM_AC_QC_biallelic.vcf.gz")
+# system("tabix -p vcf Slov_fM_AC_QC_biallelic.vcf.gz")
+# system("bcftools norm -d all Slov_fM_AC_QC_biallelic.vcf.gz -Oz -o Slov_fM_AC_QC_noDupPos.vcf.gz")
+# system("tabix -p vcf Slov_fM_AC_QC_noDupPos.vcf.gz")
 #TODO: Add the manual transformation from VCF to Ped and Map
 
 
 
 #Step 4 Remove the workers who's queen was deleted during QC
-workers_ids <- paste0("AMEL_",workers_to_remove$V2)
-write.table(workers_ids, "workers_to_remove.txt",
-            quote = FALSE, row.names = FALSE, col.names = FALSE)
-system("bcftools view -S ^workers_to_remove.txt Slov_fM_AC_QC_noDupPos.vcf.gz -Oz -o Slov_fM_AC_QC_filtered.vcf.gz")
-system("tabix -p vcf Slov_fM_AC_QC_filtered.vcf.gz")
+# workers_ids <- paste0("AMEL_",workers_to_remove$V2)
+# write.table(workers_ids, "workers_to_remove.txt",
+#             quote = FALSE, row.names = FALSE, col.names = FALSE)
+# system("bcftools view -S ^workers_to_remove.txt Slov_fM_AC_QC_noDupPos.vcf.gz -Oz -o Slov_fM_AC_QC_filtered.vcf.gz")
+# system("tabix -p vcf Slov_fM_AC_QC_filtered.vcf.gz")
 
-#Step 4.1 Check the samples were removed
-before_n <- as.integer(system("bcftools query -l Slov_fM_AC_QC_noDupPos.vcf.gz | wc -l", intern = TRUE))
-after_n  <- as.integer(system("bcftools query -l Slov_fM_AC_QC_filtered.vcf.gz | wc -l", intern = TRUE))
-cat("Removed:", before_n - after_n, "\n")
+# #Step 4.1 Check the samples were removed
+# before_n <- as.integer(system("bcftools query -l Slov_fM_AC_QC_noDupPos.vcf.gz | wc -l", intern = TRUE))
+# after_n  <- as.integer(system("bcftools query -l Slov_fM_AC_QC_filtered.vcf.gz | wc -l", intern = TRUE))
+# cat("Removed:", before_n - after_n, "\n")
 
 #FINAL VCF.GZ FILE TO GO FORWARD IS NAMES Slov_fm_AC_QC_filtered.vcf.gz
   
@@ -237,58 +190,58 @@ cat("Removed:", before_n - after_n, "\n")
 #Haploid genome data not working. Try formatting haplotypes as 0|/ 1| 
 
 # Define the input and output file paths
-vcf_file <- "Genome_SloDrones.vcf"
-output_file <- "Genome_SloDrones_haploid_fixed.vcf"
+# vcf_file <- "Genome_SloDrones.vcf"
+# output_file <- "Genome_SloDrones_haploid_fixed.vcf"
 
-# Open the input and output files
-infile <- file(vcf_file, "r")
-outfile <- file(output_file, "w")
+# # Open the input and output files
+# infile <- file(vcf_file, "r")
+# outfile <- file(output_file, "w")
 
-# Process the file line by line
-while(TRUE) {
-  line <- readLines(infile, n = 1)
+# # Process the file line by line
+# while(TRUE) {
+#   line <- readLines(infile, n = 1)
   
-  # Stop if we reach the end of the file
-  if(length(line) == 0) {
-    break
-  }
+#   # Stop if we reach the end of the file
+#   if(length(line) == 0) {
+#     break
+#   }
   
-  # Write header lines directly to the output file
-  if(grepl("^#", line)) {
-    writeLines(line, outfile)
-  } else {
-    fields <- strsplit(line, "\t")[[1]]
+#   # Write header lines directly to the output file
+#   if(grepl("^#", line)) {
+#     writeLines(line, outfile)
+#   } else {
+#     fields <- strsplit(line, "\t")[[1]]
     
-    # Check if the format field is GT (Genotype)
-    if(fields[9] == "GT") {
-      genotypes <- fields[10:length(fields)]
+#     # Check if the format field is GT (Genotype)
+#     if(fields[9] == "GT") {
+#       genotypes <- fields[10:length(fields)]
       
-      # Add a separator to each haploid genotype
-      fixed_genotypes <- sapply(genotypes, function(g) {
-        if(g %in% c("0", "1")) {
-          return(paste0(g, "|"))
-        } else {
-          return(g)
-        }
-      })
+#       # Add a separator to each haploid genotype
+#       fixed_genotypes <- sapply(genotypes, function(g) {
+#         if(g %in% c("0", "1")) {
+#           return(paste0(g, "|"))
+#         } else {
+#           return(g)
+#         }
+#       })
       
-      # Write the modified line to the output file
-      writeLines(paste(c(fields[1:9], fixed_genotypes), collapse = "\t"), outfile)
-    } else {
-      writeLines(line, outfile)
-    }
-  }
-}
+#       # Write the modified line to the output file
+#       writeLines(paste(c(fields[1:9], fixed_genotypes), collapse = "\t"), outfile)
+#     } else {
+#       writeLines(line, outfile)
+#     }
+#   }
+# }
 
 # Close the input and output files
-close(infile)
-close(outfile)
+# close(infile)
+# close(outfile)
 
-cat("Fixed VCF file saved to", output_file, "\n")
+# cat("Fixed VCF file saved to", output_file, "\n")
 
-phased_Slov_vcf <- read.vcfR("phased_Slov_filtered_Beagle4.vcf")
+# phased_Slov_vcf <- read.vcfR("phased_Slov_filtered_Beagle4.vcf")
 
-phased_Slov_haplo <- extract.gt(phased_Slov_vcf)
+# phased_Slov_haplo <- extract.gt(phased_Slov_vcf)
 
 
 

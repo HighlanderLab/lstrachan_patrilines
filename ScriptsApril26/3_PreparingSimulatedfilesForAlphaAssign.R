@@ -7,6 +7,7 @@ library(SIMplyBee)
 library(readr)
 library(genio)
 
+nSNP_array <- rbind(c(3125, 5L), c(108, 4L), c(50, 3L), c(10, 2L), c(1,1L))
 # Make 4 SNP chip sizes with an SNP array #######
 
 # Create/download the founder genomes from SIMplyBee
@@ -31,7 +32,11 @@ nCastePoisson <- SIMplyBee::nDronesPoisson
 queens <- SIMplyBee::cross(x = virgin_queens, drones = pullDroneGroupsFromDCA(DCA = matingStation_drones, n = 8, nDrones = pFathers))
 queen_colonies <- createMultiColony(queens)
 #create 30 workers per queen
-queen_colonies <- buildUp(queen_colonies, nWorkers = 30, exact = TRUE)
+queen_colonies <- buildUp(queen_colonies, nWorkers = 50, exact = TRUE)
+
+for (colony in 1:nColonies(queen_colonies)) {
+  queen_colonies@colonies[[colony]]@workers <- selectInd(queen_colonies@colonies[[colony]]@workers, nInd = 30, use = "rand")
+}
 
 #Collect the SNP genotypes of the individuals we want.
 workers <- mergePops(getWorkers(queen_colonies))
@@ -199,35 +204,6 @@ combine_haplotypes <- function(haplotype_matrix) {
   return(new_matrix)
 }
 
-# Function to convert allele codes
-convert_alleles <- function(allele) {
-  if (allele == "1") {
-    return("A")
-  } else if (allele == "2") {
-    return("C")
-  } else if (allele == "9"){
-    return("0")
-    
-  } else {
-    return(allele)
-} }
-
-
-
-convert_ped_genotypes <- function(ped_data, GE = NULL) {
-  # Applying the conversion function to each allele in the genotype columns
-  genotype_data <- ped_data[, 7:ncol(ped_data)]
-  
-
-  # Convert each allele using the sapply function
-  corrected_genotype_data <- apply(genotype_data, 2, function(column) sapply(column, convert_alleles))
-
-  
-  # Replace the original genotype data with the converted data
-  ped_data[, 7:ncol(ped_data)] <- corrected_genotype_data
-  
-  return(ped_data)
-}
 
 
 
