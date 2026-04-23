@@ -6,6 +6,9 @@ library(Eagle)
 library(tidyr)
 library(dplyr)
 
+
+pathToPlink <- "/home/jana/bin/"
+workingDir <- "/home/jana/github/lstrachan_patrilines/"
 pathToPlink <- "~/Desktop/PLINK/./"
 workingDir = "~/Desktop/lstrachan_patrilines"
 setwd(workingDir)
@@ -179,52 +182,53 @@ write.table(Slov_ped_filtered_AC, file = "Data/Real_data/Slov_fM_AC.ped", quote 
 
 
 #### ---- PLINK quality control ###################################################################################################
-setwd("Data/Real_data")
-# Step 1: Quality control with PLINK
-  system(paste0(pathToPlink, "plink --file Slov_fM_AC --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_AC_QC"))
+setwd(paste0(workingDir, "Data/Real_data"))
 
-  system(paste0(pathToPlink, "plink --bfile Slov_fM_AC_QC --recode --out Slov_fM_AC_QC"))
-  Slov_fm_AC_QC_ped <- read.table("Slov_fM_AC_QC.ped")
-  #Identify which queen was removed 
-  ped_id <- Slov_fm_AC_QC_ped$V2
-  #which queen_id is not in ped_id?
-  removed_queen <- setdiff(queen_ids, ped_id)
-  #Which workers are the offspring of the removed queen? 
-  workers_to_remove <- Slov_fm_AC_QC_ped[Slov_fm_AC_QC_ped$V4 %in% removed_queen,]
-  
-  
-  # Step 2: Convert to VCF
-  system(paste0(pathToPlink, "plink --bfile Slov_fM_AC_QC --recode vcf --out Slov_fM_AC_QC"))
-  
-  # Step 3: Sort and index the VCF
-  system("bcftools sort Slov_fM_AC_QC.vcf -Oz -o Slov_fM_AC_QC_sorted.vcf.gz")
-  system("tabix -p vcf Slov_fM_AC_QC_sorted.vcf.gz")
-  
-  # Step 3.5: Check for duplicate positions
-  system("bcftools query -f '%CHROM\\t%POS\\n' Slov_fM_AC_QC_sorted.vcf.gz | sort | uniq -d")
-  
-  # Step 3.6: Normalize and remove duplicate records
-  system("bcftools norm -m -any Slov_fM_AC_QC_sorted.vcf.gz -Oz -o Slov_fM_AC_QC_biallelic.vcf.gz")
-  system("tabix -p vcf Slov_fM_AC_QC_biallelic.vcf.gz")
-  system("bcftools norm -d all Slov_fM_AC_QC_biallelic.vcf.gz -Oz -o Slov_fM_AC_QC_noDupPos.vcf.gz")
-  system("tabix -p vcf Slov_fM_AC_QC_noDupPos.vcf.gz")
-  #TODO: Add the manual transformation from VCF to Ped and Map
-  
-  
-  
-  #Step 4 Remove the workers who's queen was deleted during QC
-  workers_ids <- paste0("AMEL_",workers_to_remove$V2)
-  write.table(workers_ids, "workers_to_remove.txt",
-              quote = FALSE, row.names = FALSE, col.names = FALSE)
-  system("bcftools view -S ^workers_to_remove.txt Slov_fM_AC_QC_noDupPos.vcf.gz -Oz -o Slov_fM_AC_QC_filtered.vcf.gz")
-  system("tabix -p vcf Slov_fM_AC_QC_filtered.vcf.gz")
-  
-  #Step 4.1 Check the samples were removed
-  before_n <- as.integer(system("bcftools query -l Slov_fM_AC_QC_noDupPos.vcf.gz | wc -l", intern = TRUE))
-  after_n  <- as.integer(system("bcftools query -l Slov_fM_AC_QC_filtered.vcf.gz | wc -l", intern = TRUE))
-  cat("Removed:", before_n - after_n, "\n")
-  
-  #FINAL VCF.GZ FILE TO GO FORWARD IS NAMES Slov_fm_AC_QC_filtered.vcf.gz
+# Step 1: Quality control with PLINK
+system(paste0(pathToPlink, "plink --file Slov_fM_AC --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_AC_QC"))
+
+system(paste0(pathToPlink, "plink --bfile Slov_fM_AC_QC --recode --out Slov_fM_AC_QC"))
+Slov_fm_AC_QC_ped <- read.table("Slov_fM_AC_QC.ped")
+#Identify which queen was removed 
+ped_id <- Slov_fm_AC_QC_ped$V2
+#which queen_id is not in ped_id?
+removed_queen <- setdiff(queen_ids, ped_id)
+#Which workers are the offspring of the removed queen? 
+workers_to_remove <- Slov_fm_AC_QC_ped[Slov_fm_AC_QC_ped$V4 %in% removed_queen,]
+
+
+# Step 2: Convert to VCF
+system(paste0(pathToPlink, "plink --bfile Slov_fM_AC_QC --recode vcf --out Slov_fM_AC_QC"))
+
+# Step 3: Sort and index the VCF
+system("bcftools sort Slov_fM_AC_QC.vcf -Oz -o Slov_fM_AC_QC_sorted.vcf.gz")
+system("tabix -p vcf Slov_fM_AC_QC_sorted.vcf.gz")
+
+# Step 3.5: Check for duplicate positions
+system("bcftools query -f '%CHROM\\t%POS\\n' Slov_fM_AC_QC_sorted.vcf.gz | sort | uniq -d")
+
+# Step 3.6: Normalize and remove duplicate records
+system("bcftools norm -m -any Slov_fM_AC_QC_sorted.vcf.gz -Oz -o Slov_fM_AC_QC_biallelic.vcf.gz")
+system("tabix -p vcf Slov_fM_AC_QC_biallelic.vcf.gz")
+system("bcftools norm -d all Slov_fM_AC_QC_biallelic.vcf.gz -Oz -o Slov_fM_AC_QC_noDupPos.vcf.gz")
+system("tabix -p vcf Slov_fM_AC_QC_noDupPos.vcf.gz")
+#TODO: Add the manual transformation from VCF to Ped and Map
+
+
+
+#Step 4 Remove the workers who's queen was deleted during QC
+workers_ids <- paste0("AMEL_",workers_to_remove$V2)
+write.table(workers_ids, "workers_to_remove.txt",
+            quote = FALSE, row.names = FALSE, col.names = FALSE)
+system("bcftools view -S ^workers_to_remove.txt Slov_fM_AC_QC_noDupPos.vcf.gz -Oz -o Slov_fM_AC_QC_filtered.vcf.gz")
+system("tabix -p vcf Slov_fM_AC_QC_filtered.vcf.gz")
+
+#Step 4.1 Check the samples were removed
+before_n <- as.integer(system("bcftools query -l Slov_fM_AC_QC_noDupPos.vcf.gz | wc -l", intern = TRUE))
+after_n  <- as.integer(system("bcftools query -l Slov_fM_AC_QC_filtered.vcf.gz | wc -l", intern = TRUE))
+cat("Removed:", before_n - after_n, "\n")
+
+#FINAL VCF.GZ FILE TO GO FORWARD IS NAMES Slov_fm_AC_QC_filtered.vcf.gz
   
 
 

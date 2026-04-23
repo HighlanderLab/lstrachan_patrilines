@@ -8,7 +8,9 @@
 ##############.  Prepping the input files ##################
 pathToPlink <- "/home/jana/bin/"
 workingDir = "/home/jana/github/lstrachan_patrilines/"
+
 setwd(workingDir)
+source("ScriptsApril26/Ped_to_raw.R")
 
 pedigree_file <- read.csv("Data/worker_pedigree.csv")
 
@@ -47,7 +49,7 @@ write.table(True_pedigree, file = "Data/AlphaAssign/SimData_TruePedigree.csv", s
 setwd("Data/Sim_WithGE")
 for (n in 1:5){ 
   print(n)
-  system(paste0(pathToPlink, "plink --file SNP_",n,"_WithGE_ACformat_QC --recode A --out SNP_",n,"_WithGE_QC_RecodeA"))
+  system(paste0(pathToPlink, "plink --file SNP_",n,"_WithGE_QC --recode A --out SNP_",n,"_WithGE_QC_RecodeA"))
   
   AlphaPed <- read.table(paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"), header=TRUE)
   AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
@@ -60,7 +62,7 @@ setwd(workingDir)
 #No genotyping errors:   
 setwd("Data/Sim_NoGE")
 for (n in 1:5){ 
-  system(paste0(pathToPlink, "plink --file SNP_",n,"_NoGE_ACformat_QC --recode A --out SNP_",n,"_NoGE_QC_RecodeA"))
+  system(paste0(pathToPlink, "plink --file SNP_",n,"_NoGE_QC --recode A --out SNP_",n,"_NoGE_QC_RecodeA"))
   
   AlphaPed <- read.table(paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"), header=TRUE)
   AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
@@ -171,7 +173,7 @@ idx <- match(Alpha_pedigree_sim$id, NoGE_2k_pedigree$id)
 update_sires <- Alpha_pedigree_sim$sire == 0 & !is.na(idx)
 Alpha_pedigree_sim_2K <- Alpha_pedigree_sim
 Alpha_pedigree_sim_2K$sire[update_sires] <- NoGE_2k_pedigree$sire[idx[update_sires]]
-write.table(Alpha_pedigree_sim_2K, file = paste0(workingDir, "Data/AlphaAssign/Alpha_pedigree_2k_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_sim_2K, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 
 NoGE_50k_pedigree <- read.table("AlphaGeno_SNP5_NoGE.sires")
@@ -185,7 +187,7 @@ idx <- match(Alpha_pedigree_sim$id, NoGE_50k_pedigree$id)
 update_sires <- Alpha_pedigree_sim$sire == 0 & !is.na(idx)
 Alpha_pedigree_sim_50K <- Alpha_pedigree_sim
 Alpha_pedigree_sim_50K$sire[update_sires] <- NoGE_50k_pedigree$sire[idx[update_sires]]
-write.table(Alpha_pedigree_sim_50K, file = paste0(workingDir, "Data/AlphaAssign/Alpha_pedigree_50k_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_sim_50K, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 
 # WithGE updated pedigree ----------------------------------------------------
@@ -201,7 +203,7 @@ idx <- match(Alpha_pedigree_sim$id, WithGE_2k_pedigree$id)
 Alpha_pedigree_sim_2K_withGE <- Alpha_pedigree_sim
 update_sires <- Alpha_pedigree_sim$sire == 0 & !is.na(idx)
 Alpha_pedigree_sim_2K_withGE$sire[update_sires] <- WithGE_2k_pedigree$sire[idx[update_sires]]
-write.table(Alpha_pedigree_sim_2K_withGE, file = paste0(workingDir, "Data/AlphaAssign/Alpha_pedigree_2k_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_sim_2K_withGE, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 
 WithGE_50k_pedigree <- read.table("AlphaGeno_SNP5_WithGE.sires")
@@ -215,7 +217,7 @@ idx <- match(Alpha_pedigree_sim$id, WithGE_50k_pedigree$id)
 update_sires <- Alpha_pedigree_sim$sire == 0 & !is.na(idx)
 Alpha_pedigree_sim_50K_withGE <- Alpha_pedigree_sim
 Alpha_pedigree_sim_50K_withGE$sire[update_sires] <- WithGE_50k_pedigree$sire[idx[update_sires]]
-write.table(Alpha_pedigree_sim_50K_withGE, file = paste0(workingDir, "Data/AlphaAssign/Alpha_pedigree_50k_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_sim_50K_withGE, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 
 #******************************************************************************
@@ -223,9 +225,13 @@ write.table(Alpha_pedigree_sim_50K_withGE, file = paste0(workingDir, "Data/Alpha
 #******************************************************************************
 
 ##############.  Prepping the input files ##################
-rm(list = ls()) #Lets clear workspace just incase something sneaks in 
+#rm(list = ls()) #Lets clear workspace just incase something sneaks in 
 pathToPlink <- "~/Desktop/PLINK/./"
 workingDir = "~/Desktop/lstrachan_patrilines"
+
+pathToPlink <- "/home/jana/bin/"
+workingDir <- "/home/jana/github/lstrachan_patrilines/"
+
 setwd(workingDir)
 dir.create("Data/Real_data/AlphaAssign")
 
@@ -311,7 +317,7 @@ Real_Alpha_df <- data.frame(
 
 
 AlphaAssign_Summary <- rbind(NoGE_Alpha_output, WithGE_Alpha_output, Real_Alpha_df)
-write.table(AlphaSummary, file = "Alpha_summary.txt", sep = " ", quote = F, col.names = T, row.names = F)
+write.table(AlphaAssign_Summary, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_summary.txt", sep = " ", quote = F, col.names = T, row.names = F))
 
 ##################################################
 # Update the pedigree
@@ -320,5 +326,5 @@ idx <- match(Alpha_pedigree_real$id, Offspring_and_candidateParent$id)
 # Replace only where sire == 0 and a match exists
 update_sires <- Alpha_pedigree_real$sire == 0 & !is.na(idx)
 Alpha_pedigree_real$sire[update_sires] <- Offspring_and_candidateParent$sire[idx[update_sires]]
-write.table(Alpha_pedigree_real, file = "Data/AlphaAssign/Alpha_pedigree_Real.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_real, file = "Outputs/AlphaAssign/Alpha_pedigree_Real.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
