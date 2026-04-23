@@ -108,7 +108,7 @@ workingDir = "~/Desktop/lstrachan_patrilines"
 setwd(workingDir)
 
 # ******* LIFE HISTORY *****************
-pedigree_file <- read.csv("Data/Real_data/Real_Data_pedigree.csv")
+pedigree_file <- read.csv("~/Desktop/lstrachan_patrilines/Data/Real_data/Real_Data_pedigree.csv")
 colnames(pedigree_file) <- c("id", "sire", "dam")
 
 #Life History - need ID, Sex, BirthYear in a csv file 
@@ -177,7 +177,7 @@ for (n in 1:5){
                              nSires_assigned = nSires_assigned,
                              nCorrect_sires = nCorrect_sires,
                              Software = "Sequoia")
-  results_list[[n]] <- df
+  results_list[[n]] <- Sequoia_file
 }
 NoGE_SequoiaTable <- do.call(rbind, results_list)
 
@@ -201,7 +201,7 @@ for (n in 1:5){
                              nSires_assigned = nSires_assigned,
                              nCorrect_sires = nCorrect_sires,
                              Software = "Sequoia")
-  results_list[[n]] <- df
+  results_list[[n]] <- Sequoia_file
 }
 WithGE_SequoiaTable <- do.call(rbind, results_list)
 
