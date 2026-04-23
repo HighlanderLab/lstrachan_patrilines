@@ -301,7 +301,7 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
   for (n in 1:16){
     vcf_gz <- load("Slov_PHASED_noPED_Chr",n,".vcf.gz")
     map <- load("Slov_PHASED_noPED_Chr",n,".map")
-    df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
+    df <- convert_VCF_Slov(vcf_file = vcf_gz, map_file = map)
     results_list[[n]] <- df
   }
   Slov_allchroms_phased_NoPed <- do.call(cbind, results_list)
@@ -311,10 +311,17 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
   for (n in 1:16){
     vcf_gz <- load("Slov_PHASED_WithPED_Chr",n,".vcf.gz")
     map <- load("Slov_PHASED_WithPED_Chr",n,".map")
-    df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
+    df <- convert_VCF_Slov(vcf_file = vcf_gz, map_file = map)
     results_list[[n]] <- df
   }
   Slov_allchroms_phased_WithPed <- do.call(cbind, results_list)
+  
+  
+  
+  #Prephased file (used for comparison in the next script )
+  Slov_prephased_haplotypes <- convert_VCF_Slov(vcf_file = "/Data/Real_data/Slov_fM_AC_QC_filtered.vcf.gz", map_file = "/Data/Real_data/Slov_fM_AC_QC.map")
+  
+  
   
   #Get the haplotypes of the pedigree made by the pedigree reconstruction
   {
@@ -358,4 +365,23 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
     rownames(Slov_PhasedHaplotypes_NoPed) <- rownames(Slov_haplotypes_phasedNoPed)
   }
 
+  #Prephased - used in the next script for comparison 
+  
+  Slov_mother_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$mother,]
+  Slov_dpc_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$dpc,]
+  Slov_workers_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$id,]
+  
+  Slov_all__prephasedHaplotypes_NoPed <-  rbind(Slov_mother_haplo_noped, Slov_dpc_haplo_noped, Slov_workers_haplo_noped)
+  
+  mother_ids <- unique(Slov_pedigree_pre$mother)
+  dpc_ids <- unique(Slov_pedigree_pre$dpc)
+  dpc_ids <- dpc_ids[dpc_ids != "0"]
+  worker_ids <- unique(Slov_pedigree_pre$id)
+  Slov_all_ids <- c(mother_ids, dpc_ids, worker_ids)
+  Slov_ind_id_1 <- paste(Slov_all_ids, "1", sep = "_")
+  Slov_ind_id_2 <- paste(Slov_all_ids, "2", sep = "_")
+  
+  Slov_haplotypes_Prephased <- get_out_haplotypes(ped_matrix = Slov_all__prephasedHaplotypes_NoPed, ind_id_1 = Slov_ind_id_1, ind_id_2 = Slov_ind_id_2)
+  Slov_haplotypes_Prephased <- apply(Slov_haplotypes_Prephased, 2, convert_genotypes)
+  rownames(Slov_haplotypes_Prephased) <- rownames(Slov_haplotypes_Prephased)
 
