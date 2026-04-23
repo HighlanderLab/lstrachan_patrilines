@@ -320,8 +320,7 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
   
   #Prephased file (used for comparison in the next script )
   Slov_prephased_haplotypes <- convert_VCF_Slov(vcf_file = "/Data/Real_data/Slov_fM_AC_QC_filtered.vcf.gz", map_file = "/Data/Real_data/Slov_fM_AC_QC.map")
-  
-  
+
   
   #Get the haplotypes of the pedigree made by the pedigree reconstruction
   {
@@ -366,7 +365,7 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
   }
 
   #Prephased - used in the next script for comparison 
-  
+  {
   Slov_mother_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$mother,]
   Slov_dpc_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$dpc,]
   Slov_workers_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$id,]
@@ -384,4 +383,4 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
   Slov_haplotypes_Prephased <- get_out_haplotypes(ped_matrix = Slov_all__prephasedHaplotypes_NoPed, ind_id_1 = Slov_ind_id_1, ind_id_2 = Slov_ind_id_2)
   Slov_haplotypes_Prephased <- apply(Slov_haplotypes_Prephased, 2, convert_genotypes)
   rownames(Slov_haplotypes_Prephased) <- rownames(Slov_haplotypes_Prephased)
-
+  }
