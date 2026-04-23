@@ -285,7 +285,7 @@ NoGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "NoGE", 
 WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "50k", ped_recon = FALSE)
 
 #********* REAL DATA ******************
-{
+
   setwd("PLACE WHERE THE REAL PHASED DATA IS STORED")
 
   # Pedigree prior to ped reconstruction
@@ -305,7 +305,6 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
     results_list[[n]] <- df
   }
   Slov_allchroms_phased_NoPed <- do.call(cbind, results_list)
-  
   
   #Phased with no pedigree
   results_list <- list()
@@ -358,6 +357,5 @@ WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithG
     Slov_PhasedHaplotypes_NoPed <- apply(Slov_haplotypes_phasedNoPed, 2, convert_genotypes)
     rownames(Slov_PhasedHaplotypes_NoPed) <- rownames(Slov_haplotypes_phasedNoPed)
   }
-}
 
-#Go onto Mendelian sampling or the haplotypes parental origins with these haplotypes
+
