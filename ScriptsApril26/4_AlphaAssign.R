@@ -248,7 +248,7 @@ Alpha_pedigree_real <- data.frame(id = pedigree_file_real$id,
                              dam = pedigree_file_real$dam)
 
 
-write.table(Alpha_pedigree_real, file = "Data/Real_data/AlphaAssign/Alpha_Pedigree_real.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_real, file = "Data/Real_data/AlphaAssign/Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
 SNP_samples <- read.csv("Data/Real_data/SNP_samples_2022.csv", header= T)
 workers_IDs_beforeQC <- SNP_samples$snp_id[SNP_samples$biotype == "worker"]
@@ -256,7 +256,6 @@ SNP_samples <- SNP_samples[SNP_samples$biotype == "dpc", ]
 SNP_samples <- SNP_samples$snp_id
 
 n <- nrow(pedigree_file_real)
-
 Potential_fathers <- data.frame(
   id = pedigree_file_real$id,
   Dpc1 = rep(SNP_samples[1], n),
