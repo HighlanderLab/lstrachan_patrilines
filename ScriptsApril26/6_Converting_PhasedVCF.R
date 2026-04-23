@@ -8,37 +8,7 @@
 #Get all of the vcf files of all phased chromosomes and convert into a more manageable format 
 
 #************ FUNCTIONS *******************
-convert_VCF <- function(vcf_file = NULL, map_file = NULL){
-  
-  chr_map <- read.table(map_file)
-  phasedVCF=vcf_file
-  
-  system(paste0('bcftools query -f "%REF %ALT [ %GT]\n" ', phasedVCF, ' > PhasedGT.txt'))
-  
-  df = read.table("PhasedGT.txt")
-  colnames(df) = c("REF", "ALT", paste0("Ind", 1:(ncol(df)-2)))
-  
-  refAlt=df[,1:2]     
-  gt=df[3:ncol(df)]
-  
-  gt_t = t(gt)
-  
-  for (col in 1:ncol(gt_t)) {
-    ref = refAlt$REF[col]
-    alt = refAlt$ALT[col]
-    gt_t[,col] = gsub("0", ref, gt_t[,col])
-    gt_t[,col] = gsub("1", alt, gt_t[,col])
-    gt_t[,col] = gsub("\\|", " ", gt_t[,col])
-  }
-  
-  #ped order is always mum/dpc/workers
-  rownames(gt_t) <- ids_all
-  
-  #get true haplotypes for colnames
-  colnames(gt_t) <- chr_map$V2
-  
-  return(gt_t)
-}
+
 get_out_haplotypes <- function(ped_matrix, ind_id_1, ind_id_2) {
   
   # Initialize matrices to hold haplotype data
@@ -79,20 +49,22 @@ get_out_haplotypes <- function(ped_matrix, ind_id_1, ind_id_2) {
   return(haplotype_matrices)
 }
 convert_genotypes <- function(genotypes) {
-  genotypes[genotypes == '1'] <- 0
+  #genotypes[genotypes == '1'] <- 0
   genotypes[genotypes == '0'] <- NA
-  genotypes[genotypes == '2'] <- 1
+  #genotypes[genotypes == '2'] <- 1
   genotypes[genotypes == 'A'] <- 0
   genotypes[genotypes == 'C'] <- 1
   
   return(as.numeric(genotypes))
 }
-convert_VCF_Slov <- function(vcf_file = NULL, map_file = NULL){
+
+convert_VCF <- function(vcf_file = NULL, map_file = NULL){
   
   chr_map <- read.table(map_file)
   phasedVCF=vcf_file
   
   system(paste0('bcftools query -f "%REF %ALT [ %GT]\n" ', phasedVCF, ' > PhasedGT.txt'))
+  system(paste0("bcftools query -l ", phasedVCF, " > SampleIDs.txt"))
   
   df = read.table("PhasedGT.txt")
   colnames(df) = c("REF", "ALT", paste0("Ind", 1:(ncol(df)-2)))
@@ -111,13 +83,17 @@ convert_VCF_Slov <- function(vcf_file = NULL, map_file = NULL){
   }
   
   #ped order is always mum/dpc/workers
-  rownames(gt_t) <- Slov_ids_preRecon
+  ids = read.table("SampleIDs.txt")
+  ids$V1 <- gsub("AMEL_", "", ids$V1)
+  rownames(gt_t) <- ids$V1
   
   #get true haplotypes for colnames
   colnames(gt_t) <- chr_map$V2
   
   return(gt_t)
 }
+
+
 Haplotype_using_pedigree <- function(GenErr = NULL, n = NULL, ped_recon = NULL) {
   
   # Validate inputs early
@@ -176,7 +152,7 @@ Haplotype_using_pedigree <- function(GenErr = NULL, n = NULL, ped_recon = NULL) 
 
 #************* SIMULATED DATA ****************************
 #Pedigree prior to reconstruction 
-Sim_pedigree_pre <- read.csv("/Data/worker_pedigree.csv")
+Sim_pedigree_pre <- read.csv("Data/worker_pedigree.csv")
 
 #Pedigree post reconstruction (with AlphaAssign)
 Alpha_pedigree_2k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt")
@@ -185,91 +161,26 @@ Alpha_pedigree_50k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_No
 Alpha_pedigree_2k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt")
 Alpha_pedigree_50k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt")
 
-#Chromosomes phased with pedigree
-{
-#nGE_SNPn_WithPED_ChrN loop
-results_list <- list()
-for (n in 1:16){
-  vcf_gz <- load("nGE_SNP2k_WithPED_Chr",n,"PHASED.vcf.gz")
-  map <- load("nGE_SNP2k_WithPED_Chr",n,"PHASED.map")
-  df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-  results_list[[n]] <- df
-}
-NoGE_SNP2k_WithPED_Allchroms <- do.call(cbind, results_list)
+setwd("Outputs/Beagle_phasing")
 
-#WithGE_SNP2k_WithPED_ChrN loop
-results_list <- list()
-for (n in 1:16){
-  vcf_gz <- load("WithGE_SNP2k_WithPED_Chr",n,"PHASED.vcf.gz")
-  map <- load("WithGE_SNP2k_WithPED_Chr",n,"PHASED.map")
-  df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-  results_list[[n]] <- df
-}
-WithGE_SNP2k_WithPED_Allchroms <- do.call(cbind, results_list)
-#NoGE_SNP50k_WithPED_ChrN loop
-
-results_list <- list()
-for (n in 1:16){
-  vcf_gz <- load("nGE_SNP50k_WithPED_Chr",n,"PHASED.vcf.gz")
-  map <- load("nGE_SNP50k_WithPED_Chr",n,"PHASED.map")
-  df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-  results_list[[n]] <- df
-}
-NoGE_SNP50k_WithPED_Allchroms <- do.call(cbind, results_list)
-
-#WithGE_SNP50k_WithPED_ChrN loop
-results_list <- list()
-for (n in 1:16){
-  vcf_gz <- load("WithGE_SNP50k_WithPED_Chr",n,"PHASED.vcf.gz")
-  map <- load("WithGE_SNP50k_WithPED_Chr",n,"PHASED.map")
-  df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-  results_list[[n]] <- df
-}
-WithGE_SNP50k_WithPED_Allchroms <- do.call(cbind, results_list)
+# Combine results across all chromosomes for each dataset
+for (pedPhase in c("noPedigree", "pedigree")) {
+  for (GEType in c("NoGE", "WithGE")) {
+    for (n in c(4, 5)) {
+      print(paste("Processing", GEType, "SNP", n, pedPhase))
+      results_list <- list()
+      for (chr in 1:16) {
+        vcf_gz <- paste0("SNP_", n, "_", GEType, "_PHASED_", pedPhase, "_chr", chr, ".vcf.gz")
+        map <- paste0("SNP_", n, "_", GEType, "_PHASED_", pedPhase, "_chr", chr, ".map")
+        df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
+        results_list[[chr]] <- df
+      }
+      combined_df <- do.call(cbind, results_list)
+      assign(paste0(GEType, "_SNP", n, "_", pedPhase, "_AllChrs"), combined_df)
+    }
+  }
 }
 
-#Chromosomes phased with NO pedigree
-{
-  #nGE_SNPn_NoPED_ChrN loop
-  results_list <- list()
-  for (n in 1:16){
-    vcf_gz <- load("nGE_SNP2k_NoPED_Chr",n,"PHASED.vcf.gz")
-    map <- load("nGE_SNP2k_NoPED_Chr",n,"PHASED.map")
-    df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-    results_list[[n]] <- df
-  }
-  NoGE_SNP2k_NoPED_Allchroms <- do.call(cbind, results_list)
-  
-  #WithGE_SNP2k_NoPED_ChrN loop
-  results_list <- list()
-  for (n in 1:16){
-    vcf_gz <- load("WithGE_SNP2k_NoPED_Chr",n,"PHASED.vcf.gz")
-    map <- load("WithGE_SNP2k_NoPED_Chr",n,"PHASED.map")
-    df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-    results_list[[n]] <- df
-  }
-  WithGE_SNP2k_NoPED_Allchroms <- do.call(cbind, results_list)
-  #NoGE_SNP50k_NoPED_ChrN loop
-  
-  results_list <- list()
-  for (n in 1:16){
-    vcf_gz <- load("nGE_SNP50k_NoPED_Chr",n,"PHASED.vcf.gz")
-    map <- load("nGE_SNP50k_NoPED_Chr",n,"PHASED.map")
-    df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-    results_list[[n]] <- df
-  }
-  NoGE_SNP50k_NoPED_Allchroms <- do.call(cbind, results_list)
-  
-  #WithGE_SNP50k_NoPED_ChrN loop
-  results_list <- list()
-  for (n in 1:16){
-    vcf_gz <- load("WithGE_SNP50k_NoPED_Chr",n,"PHASED.vcf.gz")
-    map <- load("WithGE_SNP50k_NoPED_Chr",n,"PHASED.map")
-    df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
-    results_list[[n]] <- df
-  }
-  WithGE_SNP50k_NoPED_Allchroms <- do.call(cbind, results_list)
-}
 
 
 #Get the haplotypes of the pedigree made by the pedigree reconstruction
@@ -284,6 +195,7 @@ WithGE_SNP2k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithGE
 NoGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "50k", ped_recon = FALSE)
 WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "50k", ped_recon = FALSE)
 
+######################################################################################3
 #********* REAL DATA ******************
 
   setwd("PLACE WHERE THE REAL PHASED DATA IS STORED")

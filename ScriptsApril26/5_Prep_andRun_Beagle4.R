@@ -111,7 +111,7 @@ for (i in 1:16) {
 
 #TODO: Need to make the Slov_Alpha_pedigree using the chosen sires from AlphaAssign <----------------------------------
 #PHASING WITH PEDIGREE
-system("awk   '{print $1,$1,$2,$3}' Outputs/AlphaAssign/Alpha_pedigree_Real.txt > Outputs/AlphaAssign/Alpha_pedigree_Real_Beagle.txt")
+system("awk '{print $1,$1,$2,$3}' Outputs/AlphaAssign/Alpha_pedigree_Real.txt > Outputs/AlphaAssign/Alpha_pedigree_Real_Beagle.txt")
 
 for (i in 1:16) {
   beagle_cmd <- paste0(
@@ -122,29 +122,27 @@ for (i in 1:16) {
   system(beagle_cmd)
 }
 
-
-########### STOPPED HERE
 # Use PLINK to convert phased VCFs to .map files
-#vcf_files <- list.files(pattern = "Slov_PHASED_chr.*\\.vcf\\.gz$")
-#for (f in vcf_files) {
-#  base <- sub("\\.vcf\\.gz$", "", f)
-#  plink_cmd <- paste0("./plink --vcf ", f, " --recode --double-id --allow-extra-chr --out ", base)
-#  system(plink_cmd)
-#}##
+vcf_files <- list.files(pattern = "SNP_.*\\GE_PHASED_chr.*\\.vcf\\.gz$")
+for (f in vcf_files) {
+ base <- sub("\\.vcf\\.gz$", "", f)
+ plink_cmd <- paste0(pathToPlink, "/plink --vcf ", f, " --recode --double-id --allow-extra-chr --out ", base)
+ system(plink_cmd)
+}##
 
 #Compress and index all uncompressed VCFs
-#vcf_plain <- list.files(pattern = "\\.vcf$")
-#for (f in vcf_plain) {
-#  if (!file.exists(paste0(f, ".gz"))) {
-#    system(paste("bgzip", f))
-#  }
-#}
-#vcf_gz <- list.files(pattern = "\\.vcf\\.gz$")
-#for (f in vcf_gz) {
-#  if (!file.exists(paste0(f, ".tbi"))) {
-#    system(paste("tabix -p vcf", f))
-#  }
-#}
+vcf_plain <- list.files(pattern = "\\.vcf$")
+for (f in vcf_plain) {
+ if (!file.exists(paste0(f, ".gz"))) {
+   system(paste("bgzip", f))
+ }
+}
+vcf_gz <- list.files(pattern = "\\.vcf\\.gz$")
+for (f in vcf_gz) {
+ if (!file.exists(paste0(f, ".tbi"))) {
+   system(paste("tabix -p vcf", f))
+ }
+}
 
 
 
@@ -160,7 +158,7 @@ nSNP_array <- c(4,5)
 for (n in nSNP_array){
   for (i in 1:16) {
     beagle_cmd_noGE <- paste0(
-      "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_NoGE/SNP_", n, "_NoGE_QC_ACformat.vcf out=Outputs/Beagle_phasing/SNP_", n, "_NoGE_PHASED_chr", 
+      "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_NoGE/SNP_", n, "_NoGE_QC_ACformat.vcf out=Outputs/Beagle_phasing/SNP_", n, "_NoGE_PHASED_noPedigree_chr", 
       i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
     )
     #window=200 overlap=50 
@@ -168,7 +166,7 @@ for (n in nSNP_array){
 
     
     beagle_cmd_withGE <- paste0(
-      "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_WithGE/SNP_", n, "_WithGE_QC_ACformat.vcf out=Outputs/Beagle_phasing/SNP_", n, "_WithGE_PHASED_chr", 
+      "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_WithGE/SNP_", n, "_WithGE_QC_ACformat.vcf out=Outputs/Beagle_phasing/SNP_", n, "_WithGE_PHASED_noPedigree_chr", 
       i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
     )
     #window=200 overlap=50 
@@ -186,13 +184,15 @@ for (n in nSNP_array){
     system(paste0("sed -i 's/1_0/0/g' Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_NoGE_Beagle.txt"))
 
     beagle_cmd_noGE <- paste0(
-      "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_NoGE/SNP_", n, "_NoGE_QC_ACformat.vcf ped=Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_NoGE.txt out=Outputs/Beagle_phasing/SNP_", n, "_NoGE_PHASED_pedigree_chr", 
+      "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_NoGE/SNP_", n, "_NoGE_QC_ACformat.vcf ped=Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_NoGE_Beagle.txt out=Outputs/Beagle_phasing/SNP_", n, "_NoGE_PHASED_pedigree_chr", 
       i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
     )
     system(beagle_cmd_noGE)
 
-    system(paste0("awk '{print $1,$1,$2,$3}' Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_WithGE.txt > Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_WithGE.txt_Beagle.txt"))
 
+
+    system(paste0("awk   '{print \"1_\"$1,\"1_\"$1,\"1_\"$2,\"1_\"$3}' Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_WithGE.txt > Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_WithGE_Beagle.txt"))
+    system(paste0("sed -i 's/1_0/0/g' Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_WithGE_Beagle.txt"))
 
     beagle_cmd_withGE <- paste0(
       "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_WithGE/SNP_", n, "_WithGE_QC_ACformat.vcf ped=Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_WithGE.txt out=Outputs/Beagle_phasing/SNP_", n, "_WithGE_PHASED_pedigree_chr", 
@@ -203,26 +203,29 @@ for (n in nSNP_array){
 }
 
 # Use PLINK to convert phased VCFs to .map files
-#vcf_files <- list.files(pattern = "Slov_PHASED_chr.*\\.vcf\\.gz$")
-#for (f in vcf_files) {
-#  base <- sub("\\.vcf\\.gz$", "", f)
-#  plink_cmd <- paste0("./plink --vcf ", f, " --recode --double-id --allow-extra-chr --out ", base)
-#  system(plink_cmd)
-#}
+setwd(workingDir)
+#List all the files that start with Slov_PHASED_chr and end with .vcf.gz in the Outputs/Beagle_phasing directory
+setwd("Outputs/Beagle_phasing")
+vcf_files <- list.files(pattern = "Slov_PHASED_chr.*\\.vcf\\.gz$")
+for (f in vcf_files) {
+ base <- sub("\\.vcf\\.gz$", "", f)
+ plink_cmd <- paste0(pathToPlink, "plink --vcf ", f, " --recode --double-id --allow-extra-chr --out ", base)
+ system(plink_cmd)
+}
 
 #Compress and index all uncompressed VCFs
-#vcf_plain <- list.files(pattern = "\\.vcf$")
-#for (f in vcf_plain) {
-#  if (!file.exists(paste0(f, ".gz"))) {
-#    system(paste("bgzip", f))
-#  }
-#}
-#vcf_gz <- list.files(pattern = "\\.vcf\\.gz$")
-#for (f in vcf_gz) {
-#  if (!file.exists(paste0(f, ".tbi"))) {
-#    system(paste("tabix -p vcf", f))
-#  }
-#}
+vcf_plain <- list.files(pattern = "\\.vcf$")
+for (f in vcf_plain) {
+ if (!file.exists(paste0(f, ".gz"))) {
+   system(paste("bgzip", f))
+ }
+}
+vcf_gz <- list.files(pattern = "\\.vcf\\.gz$")
+for (f in vcf_gz) {
+ if (!file.exists(paste0(f, ".tbi"))) {
+   system(paste("tabix -p vcf", f))
+ }
+}
 
 
 

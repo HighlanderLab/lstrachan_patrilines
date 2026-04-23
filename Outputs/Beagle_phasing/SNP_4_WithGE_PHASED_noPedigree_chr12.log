@@ -1,0 +1,313 @@
+beagle.jar (r1399)
+Copyright (C) 2014 Brian L. Browning
+Enter "java -jar beagle.jar" for a summary of command line arguments.
+Start time: 03:23 PM CEST on 23 Apr 2026
+
+Command line: java -Xmx7900m -jar beagle.jar
+  gt=Data/Sim_WithGE/SNP_4_WithGE_QC_ACformat.vcf
+  out=Outputs/Beagle_phasing/SNP_4_WithGE_PHASED_noPedigree_chr12
+  phase-its=20
+  impute-its=20
+  burnin-its=20
+  chrom=12
+
+reference samples: 0
+target samples:    256
+  singles: 256
+  duos:    0
+  trios:   0
+
+Window 1 [ 12:11-3148 ]
+target markers:    72
+
+Starting burn-in iterations
+
+Window=1 Iteration=1
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 8      max edges/level: 14
+mean edges/node:  1.917  mean count/edge: 64
+
+Window=1 Iteration=2
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 11     max edges/level: 18
+mean edges/node:  1.899  mean count/edge: 47
+
+Window=1 Iteration=3
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 15     max edges/level: 28
+mean edges/node:  1.804  mean count/edge: 34
+
+Window=1 Iteration=4
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 20     max edges/level: 35
+mean edges/node:  1.671  mean count/edge: 26
+
+Window=1 Iteration=5
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 25     max edges/level: 39
+mean edges/node:  1.571  mean count/edge: 20
+
+Window=1 Iteration=6
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 32     max edges/level: 56
+mean edges/node:  1.454  mean count/edge: 16
+
+Window=1 Iteration=7
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 37     max edges/level: 58
+mean edges/node:  1.368  mean count/edge: 14
+
+Window=1 Iteration=8
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 37     max edges/level: 64
+mean edges/node:  1.345  mean count/edge: 14
+
+Window=1 Iteration=9
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 42     max edges/level: 74
+mean edges/node:  1.294  mean count/edge: 12
+
+Window=1 Iteration=10
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 39     max edges/level: 72
+mean edges/node:  1.296  mean count/edge: 13
+
+Window=1 Iteration=11
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 42     max edges/level: 76
+mean edges/node:  1.249  mean count/edge: 12
+
+Window=1 Iteration=12
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 40     max edges/level: 72
+mean edges/node:  1.266  mean count/edge: 13
+
+Window=1 Iteration=13
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 42     max edges/level: 73
+mean edges/node:  1.245  mean count/edge: 12
+
+Window=1 Iteration=14
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 40     max edges/level: 72
+mean edges/node:  1.265  mean count/edge: 13
+
+Window=1 Iteration=15
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 41     max edges/level: 75
+mean edges/node:  1.240  mean count/edge: 12
+
+Window=1 Iteration=16
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 40     max edges/level: 69
+mean edges/node:  1.246  mean count/edge: 13
+
+Window=1 Iteration=17
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 43     max edges/level: 74
+mean edges/node:  1.235  mean count/edge: 12
+
+Window=1 Iteration=18
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 41     max edges/level: 76
+mean edges/node:  1.234  mean count/edge: 12
+
+Window=1 Iteration=19
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 44     max edges/level: 77
+mean edges/node:  1.228  mean count/edge: 12
+
+Window=1 Iteration=20
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 43     max edges/level: 77
+mean edges/node:  1.228  mean count/edge: 12
+
+Starting phasing iterations
+
+Window=1 Iteration=21
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 43     max edges/level: 76
+mean edges/node:  1.243  mean count/edge: 12
+
+Window=1 Iteration=22
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 42     max edges/level: 79
+mean edges/node:  1.239  mean count/edge: 12
+
+Window=1 Iteration=23
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 43     max edges/level: 74
+mean edges/node:  1.237  mean count/edge: 12
+
+Window=1 Iteration=24
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 44     max edges/level: 80
+mean edges/node:  1.239  mean count/edge: 12
+
+Window=1 Iteration=25
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 45     max edges/level: 78
+mean edges/node:  1.222  mean count/edge: 11
+
+Window=1 Iteration=26
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 41     max edges/level: 78
+mean edges/node:  1.242  mean count/edge: 12
+
+Window=1 Iteration=27
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 45     max edges/level: 80
+mean edges/node:  1.240  mean count/edge: 11
+
+Window=1 Iteration=28
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 42     max edges/level: 76
+mean edges/node:  1.232  mean count/edge: 12
+
+Window=1 Iteration=29
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 45     max edges/level: 78
+mean edges/node:  1.232  mean count/edge: 11
+
+Window=1 Iteration=30
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 43     max edges/level: 79
+mean edges/node:  1.233  mean count/edge: 12
+
+Window=1 Iteration=31
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 44     max edges/level: 76
+mean edges/node:  1.225  mean count/edge: 12
+
+Window=1 Iteration=32
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 44     max edges/level: 76
+mean edges/node:  1.231  mean count/edge: 12
+
+Window=1 Iteration=33
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 45     max edges/level: 85
+mean edges/node:  1.204  mean count/edge: 11
+
+Window=1 Iteration=34
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 44     max edges/level: 79
+mean edges/node:  1.218  mean count/edge: 12
+
+Window=1 Iteration=35
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 44     max edges/level: 78
+mean edges/node:  1.226  mean count/edge: 12
+
+Window=1 Iteration=36
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 45     max edges/level: 77
+mean edges/node:  1.220  mean count/edge: 11
+
+Window=1 Iteration=37
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 46     max edges/level: 83
+mean edges/node:  1.217  mean count/edge: 11
+
+Window=1 Iteration=38
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 47     max edges/level: 85
+mean edges/node:  1.216  mean count/edge: 11
+
+Window=1 Iteration=39
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 46     max edges/level: 82
+mean edges/node:  1.210  mean count/edge: 11
+
+Window=1 Iteration=40
+Time for building model:         0 seconds
+Time for sampling (singles):     0 seconds
+Singles model
+mean edges/level: 43     max edges/level: 78
+mean edges/node:  1.221  mean count/edge: 12
+
+Number of markers:             72
+Total time for building model: 1 second
+Total time for sampling:       2 seconds
+Total run time:                4 seconds
+
+End time: 03:23 PM CEST on 23 Apr 2026
+beagle.jar (r1399) finished
