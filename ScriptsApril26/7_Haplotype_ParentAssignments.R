@@ -725,7 +725,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       pat_results <- list()
       mat_results <- list() 
       
-      for (j in unique(map[, 1])) {
+      for (j in 1){#unique(map[, 1])) {
         print(x = c(i,j))
         Chr_map <- map[map$V1 == j, ]
         Chr_markerNames <- Chr_map[, 2]
@@ -1229,12 +1229,13 @@ colnames(Slov_pedigree_post) <- cols
 #####################################################################################
 
 # ••• Simulated •••
-true_vs_NoGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
+
+true_vs_NoGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
 true_vs_NoGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
-true_vs_WithGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
-true_vs_WithGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
+true_vs_WithGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
+true_vs_WithGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
 true_vs_NoGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
 true_vs_NoGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
@@ -1259,17 +1260,24 @@ Route1_SimTrue <- Route1_flipping(perfect_haplotypes = TRUE, pedigree = Worker_p
 dir.create("Data/Haplo_Assignment")
 save(Route1_SimTrue, file = "Data/Haplo_Assignment/Route1_SimTrue.Rdata")
 
+#Editing route 1 pedigrees - can't have sire's present 
+Rec_pedigree_2k_NoGE_filtered <- Rec_pedigree_2k_NoGE[Rec_pedigree_2k_NoGE$sire != 0,]
+Rec_pedigree_50k_NoGE_filtered <- Rec_pedigree_50k_NoGE[Rec_pedigree_50k_NoGE$sire != 0,]
+Rec_pedigree_2k_WithGE_filtered <- Rec_pedigree_2k_WithGE[Rec_pedigree_2k_WithGE$sire != 0,]
+Rec_pedigree_50k_WithGE_filtered <- Rec_pedigree_50k_WithGE[Rec_pedigree_50k_WithGE$sire != 0,]
+
+
 #2k SNP
-Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE, method = "power_mean", Data_type = "NoGE_SNP2k")
-Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
-write.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP2k.csv")
-write.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP2k.csv")
+Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP2k")
+Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP2k")
+save(Route1_NoGE_SNP2k, file ="/Data/Haplo_Assignment/Route1_NoGE_SNP2k.Rdata")
+save(Route1_WithGE_SNP2k, file = "/Data/Haplo_Assignment/Route1_WithGE_SNP2k.Rdata")
 
 #50k SNP
-Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE, method = "power_mean", Data_type = "NoGE_SNP50k")
-Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE, method = "power_mean", Data_type = "WithGE_SNP50k")
-write.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP50k.csv")
-write.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP50k.csv")
+Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP50k")
+Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP50k")
+save(Route1_NoGE_SNP50k, file = "/Data/Haplo_Assignment/Route1_NoGE_SNP50k.Rdata")
+save(Route1_WithGE_SNP50k, file = "/Data/Haplo_Assignment/Route1_WithGE_SNP50k.Rdata")
 
 #Real data
 Route1_Real <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_post, methods = "power_mean", Data_type = "Real_Slov_data")
