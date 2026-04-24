@@ -74,6 +74,7 @@ rm(list = ls())
 
 
 workingDir = "~/Desktop/lstrachan_patrilines"
+workingDir = "/home/jana/github/lstrachan_patrilines"
 setwd(workingDir)
 
 #####################################################################################
@@ -1200,15 +1201,8 @@ names(Rec_pedigree_50k_WithGE) <- cols
 
 
 #Get haplotypes made in 6_Converting_PhasedVCF scripts
-NoGE_SNP2k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/NoGE_SNP2k_PhasedHaplotypes_recPed.txt")
-WithGE_SNP2k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/WithGE_SNP2k_PhasedHaplotypes_recPed.txt")
-NoGE_SNP50k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/NoGE_SNP50k_PhasedHaplotypes_recPed.txt")
-WithGE_SNP50k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/WithGE_SNP50k_PhasedHaplotypes_recPed.txt")
-
-NoGE_SNP2k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/NoGE_SNP2k_PhasedHaplotypes_matPed.txt")
-WithGE_SNP2k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/WithGE_SNP2k_PhasedHaplotypes_matPed.txt")
-NoGE_SNP50k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/NoGE_SNP50k_PhasedHaplotypes_matPed.txt")
-WithGE_SNP50k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/WithGE_SNP50k_PhasedHaplotypes_matPed.txt")
+setwd(workingDir)
+load("Outputs/Beagle_phasing/All_Phased_Haplotypes.RData")
 
 NoGE_map_2k <- read.table("Data/Sim_NoGE/SNP_4_NoGE_QC_ACformat.map")
 WithGE_map_2k <- read.table("Data/Sim_WithGE/SNP_4_WithGE_QC_ACformat.map")
@@ -1218,7 +1212,6 @@ WithGE_map_50k <- read.table("Data/Sim_WithGE/SNP_5_WithGE_QC_ACformat.map")
 #####################################################################################
 #**** Get the real data phased haplotypes ******
 #####################################################################################
-setwd(workingDir)
 # Pedigree prior to ped reconstruction
 Slov_pedigree_pre <- read.table("Data/Real_data/Real_Data_pedigree.txt")
 colnames(Slov_pedigree_pre) <- cols
@@ -1227,30 +1220,34 @@ colnames(Slov_pedigree_pre) <- cols
 Slov_pedigree_post <- read.table("Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
 colnames(Slov_pedigree_post) <- cols
 
-Slov_PhasedHaplotypes_recPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_recPed.txt")
-Slov_PhasedHaplotypes_matPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_matPed.txt")
-
 #get the pre-phased data for comparison
-Slov_haplotypes_Prephased <- read.table("FILELOCATION/ Slov_haplotypes_Prephased.txt")
+#Slov_haplotypes_Prephased <- read.table("FILELOCATION/ Slov_haplotypes_Prephased.txt")
 
-Slov_map <- read.table("/Data/Real_data/Slov_fM_AC_QC.map")
+#Slov_map <- read.table("/Data/Real_data/Slov_fM_AC_QC.map")
 
 #####################################################################################
 #*** Check the different phasing versions compared to the real and prephased data just to check similarity ***
 #####################################################################################
 
 # ••• Simulated •••
+
 true_vs_NoGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
 true_vs_NoGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
+
 
 true_vs_WithGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
 true_vs_WithGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
-true_vs_NoGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_50k_NoGE )
+true_vs_NoGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
 true_vs_NoGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
-true_vs_WithGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_50k_WithGE )
+true_vs_WithGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
 true_vs_WithGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
+
+# ••• Real data - prephase vs postphase ••• - don't know if this will work. Probably isn't essential info to know
+
+#prephase_vs_Slov_PhasedHaplotypes_recPed <-  check_haplotype(true_haplotypes = Slov_haplotypes_Prephased, results = Slov_PhasedHaplotypes_recPed, pedigree = Slov_pedigree_post)
+#prephase_vs_Slov_PhasedHaplotypes_matPed <-  check_haplotype(true_haplotypes = Slov_haplotypes_Prephased, results = Slov_PhasedHaplotypes_matPed, pedigree = Slov_pedigree_pre)
 
 
 #####################################################################################

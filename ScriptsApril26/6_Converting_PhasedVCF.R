@@ -13,7 +13,7 @@ workingDir <- "/home/jana/github/lstrachan_patrilines/"
 pathToBeagle <- "/home/jana/bin/"
 pathToPlink <- "/home/jana/bin/"
 
-get_out_haplotypes <- function(ped_matrix, ind_id_1, ind_id_2) {
+get_out_haplotypes <- function(ped_matrix, ind_id_1, ind_id_2, realData = FALSE) {
   
   # Initialize matrices to hold haplotype data
   haplotype_matrix_0 <- matrix(nrow = nrow(ped_matrix), ncol = ncol(ped_matrix))
@@ -46,11 +46,13 @@ get_out_haplotypes <- function(ped_matrix, ind_id_1, ind_id_2) {
   
   # Combine haplotype matrices into a list
   haplotype_matrices <- rbind(haplotype_matrix_0, haplotype_matrix_1)
-  
-  #order them 
-  haplotype_matrices <- order_by_prefix(haplotype_matrices)
-  
-  return(haplotype_matrices)
+
+  #order them
+  if (realData) {
+    haplotype_matrices <- order_by_prefix_realData(haplotype_matrices)
+  } else {
+    haplotype_matrices <- order_by_prefix(haplotype_matrices)
+  }
 }
 
 convert_genotypes <- function(genotypes) {
@@ -137,7 +139,48 @@ Haplotype_using_pedigree <- function(GenErr = NULL, n = NULL, ped_recon = NULL, 
   ind_id_2 <- paste0(all_ids, "_2")
   
   # Process haplotypes
-  tmp  <- get_out_haplotypes(Sim_all_haplo, ind_id_1 = ind_id_1, ind_id_2 = ind_id_2)
+  tmp  <- get_out_haplotypes(Sim_all_haplo, ind_id_1 = ind_id_1, ind_id_2 = ind_id_2, realData = FALSE)
+  tmp2 <- apply(tmp, 2, convert_genotypes)
+  
+  rownames(tmp2) <- rownames(tmp)
+  
+  return(tmp2)
+}
+
+Haplotype_using_pedigree_realData <- function(pedigree_name = NULL, haplo_name = NULL) {
+  
+  # Get pedigree
+  pedigree <- read.table(pedigree_name)
+  colnames(pedigree) <- c("id", "dpc", "mother")
+  pedigree = pedigree[pedigree$mother != 0,]
+  
+  # Get haplotypes
+  if (!exists(haplo_name)) {
+    stop(paste("Object", haplo_name, "not found"))
+  }
+  All_chroms <- get(haplo_name)
+  rownames(All_chroms) <- gsub("1_", "", rownames(All_chroms))
+  pedigree = pedigree[pedigree$id %in% rownames(All_chroms),]
+  
+  # Subset haplotypes
+  Sim_mother_haplo  <- All_chroms[rownames(All_chroms) %in% pedigree$mother, , drop = FALSE]
+  Sim_dpc_haplo     <- All_chroms[rownames(All_chroms) %in% pedigree$dpc, , drop = FALSE]
+  Sim_workers_haplo <- All_chroms[rownames(All_chroms) %in% pedigree$id, , drop = FALSE]
+  
+  Sim_all_haplo <- rbind(Sim_mother_haplo, Sim_dpc_haplo, Sim_workers_haplo)
+  
+  # IDs
+  mother_ids <- unique(pedigree$mother)
+  dpc_ids    <- setdiff(unique(pedigree$dpc), "0")
+  worker_ids <- unique(pedigree$id)
+  
+  all_ids <- unique(c(mother_ids, dpc_ids, worker_ids))
+  
+  ind_id_1 <- paste0(all_ids, "_1")
+  ind_id_2 <- paste0(all_ids, "_2")
+  
+  # Process haplotypes
+  tmp  <- get_out_haplotypes(Sim_all_haplo, ind_id_1 = ind_id_1, ind_id_2 = ind_id_2, realData = TRUE)
   tmp2 <- apply(tmp, 2, convert_genotypes)
   
   rownames(tmp2) <- rownames(tmp)
@@ -148,6 +191,16 @@ Haplotype_using_pedigree <- function(GenErr = NULL, n = NULL, ped_recon = NULL, 
 order_by_prefix <- function(df) {
   # Extract the part before the underscore
   prefix <- as.numeric(sapply(rownames(df), function(x) strsplit(x, "_")[[1]][1]))
+  
+  # Order the data frame based on the extracted prefix
+  df_ordered <- df[order(prefix, rownames(df)), , drop = FALSE]
+  
+  return(df_ordered)
+}
+
+order_by_prefix_realData <- function(df) {
+  # Extract the part before the underscore
+  prefix <- sapply(rownames(df), function(x) strsplit(x, "_")[[1]][1])
   
   # Order the data frame based on the extracted prefix
   df_ordered <- df[order(prefix, rownames(df)), , drop = FALSE]
@@ -212,101 +265,30 @@ save(list = c("NoGE_SNP2k_PhasedHaplotypes_matPed", "WithGE_SNP2k_PhasedHaplotyp
 ######################################################################################3
 #********* REAL DATA ******************
 
-  setwd("PLACE WHERE THE REAL PHASED DATA IS STORED")
+setwd("Outputs/Beagle_phasing")
 
-  # Pedigree prior to ped reconstruction
-  Slov_pedigree_pre <- read.table("~/Desktop/lstrachan_patrilines/Data/Real_data/AlphaAssign/Pedigree.txt")
-  colnames(Slov_pedigree_pre) <- c("id","dpc","mother")
-  
-  #After reconstruction
-  Slov_pedigree_post <- read.table("Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
-  colnames(Slov_pedigree_post) <- c("id","dpc","mother")
-  
-  #Phased with pedigree
-  results_list <- list()
-  for (n in 1:16){
-    vcf_gz <- load("Slov_PHASED_noPED_Chr",n,".vcf.gz")
-    map <- load("Slov_PHASED_noPED_Chr",n,".map")
-    df <- convert_VCF_Slov(vcf_file = vcf_gz, map_file = map)
-    results_list[[n]] <- df
+#Phased with pedigree
+results_list <- list()
+for (pedPhase in c("recPedigree", "matPedigree")) {
+  for (chr in 1:1){
+    vcf_gz <- paste0("Slov_PHASED_", pedPhase, "_chr",chr,".vcf.gz")
+    map <- paste0("Slov_PHASED_", pedPhase, "_chr",chr,".map")
+    df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
+    results_list[[chr]] <- df
   }
-  Slov_allchroms_phased_NoPed <- do.call(cbind, results_list)
-  
-  #Phased with no pedigree
-  results_list <- list()
-  for (n in 1:16){
-    vcf_gz <- load("Slov_PHASED_WithPED_Chr",n,".vcf.gz")
-    map <- load("Slov_PHASED_WithPED_Chr",n,".map")
-    df <- convert_VCF_Slov(vcf_file = vcf_gz, map_file = map)
-    results_list[[n]] <- df
-  }
-  Slov_allchroms_phased_WithPed <- do.call(cbind, results_list)
-  
-  
-  
-  #Prephased file (used for comparison in the next script )
-  Slov_prephased_haplotypes <- convert_VCF_Slov(vcf_file = "/Data/Real_data/Slov_fM_AC_QC_filtered.vcf.gz", map_file = "/Data/Real_data/Slov_fM_AC_QC.map")
+  combined_df <- do.call(cbind, results_list)
+  assign(paste0("Slov_PhasedHaplotypes_", pedPhase, "_AllChrs"), combined_df)
+}
 
-  
-  #Get the haplotypes of the pedigree made by the pedigree reconstruction
-  {
-    Slov_mother_haplo <- Slov_allchroms_phasedwithPed[rownames(Slov_allchroms_phasedwithPed) %in% Slov_pedigree_post$mother,]
-    Slov_dpc_haplo <- Slov_allchroms_phasedwithPed[rownames(Slov_allchroms_phasedwithPed) %in% Slov_pedigree_post$dpc,]
-    Slov_workers_haplo <- Slov_allchroms_phasedwithPed[rownames(Slov_allchroms_phasedwithPed) %in% Slov_pedigree_post$id,]
-    
-    Slov_all_haplo_phasedwithPed <-  rbind(Slov_mother_haplo, Slov_dpc_haplo, Slov_workers_haplo)
-    
-    mother_ids <- unique(Slov_pedigree_post$mother)
-    dpc_ids <- unique(Slov_pedigree_post$dpc)
-    dpc_ids <- dpc_ids[dpc_ids != "0"]
-    worker_ids <- unique(Slov_pedigree_post$id)
-    Slov_all_ids <- c(mother_ids, dpc_ids, worker_ids)
-    Slov_ind_id_1 <- paste(Slov_all_ids, "1", sep = "_")
-    Slov_ind_id_2 <- paste(Slov_all_ids, "2", sep = "_")
-    
-    Slov_haplotypes_phasedwithPed <- get_out_haplotypes(ped_matrix = Slov_all_haplo_phasedwithPed, ind_id_1 = Slov_ind_id_1, ind_id_2 = Slov_ind_id_2)
-    Slov_PhasedHaplotypes_WithPed <- apply(Slov_haplotypes_phasedwithPed, 2, convert_genotypes)
-    rownames(Slov_PhasedHaplotypes_WithPed) <- rownames(Slov_haplotypes_phasedwithPed)
-  }
-  
-  #without pedigree
-  {
-    Slov_mother_haplo_noped <- Slov_allchroms_phasedNoPed[rownames(Slov_allchroms_phasedNoPed) %in% Slov_pedigree_pre$mother,]
-    Slov_dpc_haplo_noped <- Slov_allchroms_phasedNoPed[rownames(Slov_allchroms_phasedNoPed) %in% Slov_pedigree_pre$dpc,]
-    Slov_workers_haplo_noped <- Slov_allchroms_phasedNoPed[rownames(Slov_allchroms_phasedNoPed) %in% Slov_pedigree_pre$id,]
-    
-    Slov_all_haplo_phasedNoPed <-  rbind(Slov_mother_haplo_noped, Slov_dpc_haplo_noped, Slov_workers_haplo_noped)
-    
-    mother_ids <- unique(Slov_pedigree_pre$mother)
-    dpc_ids <- unique(Slov_pedigree_pre$dpc)
-    dpc_ids <- dpc_ids[dpc_ids != "0"]
-    worker_ids <- unique(Slov_pedigree_pre$id)
-    Slov_all_ids <- c(mother_ids, dpc_ids, worker_ids)
-    Slov_ind_id_1 <- paste(Slov_all_ids, "1", sep = "_")
-    Slov_ind_id_2 <- paste(Slov_all_ids, "2", sep = "_")
-    
-    Slov_haplotypes_phasedNoPed <- get_out_haplotypes(ped_matrix = Slov_all_haplo_phasedNoPed, ind_id_1 = Slov_ind_id_1, ind_id_2 = Slov_ind_id_2)
-    Slov_PhasedHaplotypes_NoPed <- apply(Slov_haplotypes_phasedNoPed, 2, convert_genotypes)
-    rownames(Slov_PhasedHaplotypes_NoPed) <- rownames(Slov_haplotypes_phasedNoPed)
-  }
+setwd(workingDir)
+#Prephased file (used for comparison in the next script )
+vcf_file = "Data/Real_data/Slov_fM_QC_ACformat_sorted_biallelic_noDupPos.vcf.gz"
+base <- sub("\\.vcf\\.gz$", "", vcf_file)
+plink_cmd <- paste0(pathToPlink, "/plink --vcf ", vcf_file, " --recode --double-id --allow-extra-chr --out ", base)
+system(plink_cmd)
+map_file = "Data/Real_data/Slov_fM_QC_ACformat_sorted_biallelic_noDupPos.map"
+Slov_prephased_haplotypes <- convert_VCF(vcf_file = vcf_file, map_file = map_file)
 
-  #Prephased - used in the next script for comparison 
-  {
-  Slov_mother_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$mother,]
-  Slov_dpc_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$dpc,]
-  Slov_workers_haplo_noped <- Slov_prephased_haplotypes[rownames(Slov_prephased_haplotypes) %in% Slov_pedigree_pre$id,]
-  
-  Slov_all__prephasedHaplotypes_NoPed <-  rbind(Slov_mother_haplo_noped, Slov_dpc_haplo_noped, Slov_workers_haplo_noped)
-  
-  mother_ids <- unique(Slov_pedigree_pre$mother)
-  dpc_ids <- unique(Slov_pedigree_pre$dpc)
-  dpc_ids <- dpc_ids[dpc_ids != "0"]
-  worker_ids <- unique(Slov_pedigree_pre$id)
-  Slov_all_ids <- c(mother_ids, dpc_ids, worker_ids)
-  Slov_ind_id_1 <- paste(Slov_all_ids, "1", sep = "_")
-  Slov_ind_id_2 <- paste(Slov_all_ids, "2", sep = "_")
-  
-  Slov_haplotypes_Prephased <- get_out_haplotypes(ped_matrix = Slov_all__prephasedHaplotypes_NoPed, ind_id_1 = Slov_ind_id_1, ind_id_2 = Slov_ind_id_2)
-  Slov_haplotypes_Prephased <- apply(Slov_haplotypes_Prephased, 2, convert_genotypes)
-  rownames(Slov_haplotypes_Prephased) <- rownames(Slov_haplotypes_Prephased)
-  }
+
+Slov_PhasedHaplotypes_matPed <- Haplotype_using_pedigree_realData(pedigree_name = "Data/Real_data/Real_Data_pedigree.txt", haplo_name = "Slov_PhasedHaplotypes_matPedigree_AllChrs") #Slov_PhasedHaplotypes_NOPed
+Slov_PhasedHaplotypes_recPed <- Haplotype_using_pedigree_realData(pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_Real.txt", haplo_name = "Slov_PhasedHaplotypes_recPedigree_AllChrs") #Slov_PhasedHaplotypes_WithPed
