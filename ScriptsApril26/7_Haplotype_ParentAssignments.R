@@ -4,7 +4,7 @@
 
 #In this section we'll use 2 routes:
 
-#.  - Route 1: use pedigree reconstruction and use both dam and dpc pedigree ID to assign haplotype parental origins
+#.  - Route 1: use pedigree reconstruction and use both dam and sire pedigree ID to assign haplotype parental origins
 #Use haplotypes from phasing using pedigree
 
 #.  - Route 2: DO NOT use pedigree reconstruction and use ONLY dam pedigree ID to assign haplotype parental origins
@@ -30,10 +30,10 @@
 #Practical example:
 
 #Offspring with haplotypes [0,1,0,1]
-#Mother with genotypes     [0,1,2,0]
+#dam with genotypes     [0,1,2,0]
 #DPQ with genotypes        [1,0,1,1]
 
-# Using Table above, we calculate mismatches for the mother:
+# Using Table above, we calculate mismatches for the dam:
 #   0 - 0 = 0     --> MATCH
 #   1 - 1 = 0     --> MATCH
 #   0 - 2 = -2    --> MISMATCH
@@ -55,7 +55,8 @@
 # The lower score for the father (0.75 vs 1.25) suggests that the haplotype is paternally derived.
 
 #######################################################################################################################
-
+# --- Clear Workspace ---
+rm(list = ls())
 # --- Libraries ---
 {
   library(Eagle)
@@ -66,16 +67,13 @@
   library(genio)
   library(ggplot2)
   library(dplyr)
-  library(VariantAnnotation)
   library(vcfR)
   library(tibble)
 }
 
-# --- Clear Workspace ---
-rm(list = ls())
+
 
 workingDir = "~/Desktop/lstrachan_patrilines"
-
 setwd(workingDir)
 
 #####################################################################################
@@ -462,33 +460,33 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     for (i in 1:nrow(pedigree)) {
       offspring_id <- pedigree$id[i]
-      mother_id <- pedigree$mother[i]
-      dpc_id <- pedigree$dpc[i]
+      dam_id <- pedigree$dam[i]
+      sire_id <- pedigree$sire[i]
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row,]
       Offspring_Hap1 <- t(as.data.frame(offspring_haplotypes_i[1,]))
       Offspring_Hap2 <- t(as.data.frame(offspring_haplotypes_i[2,]))
       
-      mother_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% mother_id]
-      mother_haplotypes_i <- haplotypes[mother_row,]
-      Maternal_Hap1 <- t(as.data.frame(mother_haplotypes_i[1,]))
-      rownames(Maternal_Hap1) <- mother_id
-      Maternal_Hap2 <- t(as.data.frame(mother_haplotypes_i[2,]))
-      rownames(Maternal_Hap2) <- mother_id
+      dam_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% dam_id]
+      dam_haplotypes_i <- haplotypes[dam_row,]
+      Maternal_Hap1 <- t(as.data.frame(dam_haplotypes_i[1,]))
+      rownames(Maternal_Hap1) <- dam_id
+      Maternal_Hap2 <- t(as.data.frame(dam_haplotypes_i[2,]))
+      rownames(Maternal_Hap2) <- dam_id
       Maternal_Geno <- matrix(data = Maternal_Hap1 + Maternal_Hap2, nrow = 1)
       colnames(Maternal_Geno) <- colnames(Maternal_Hap1)
-      rownames(Maternal_Geno) <- mother_id
+      rownames(Maternal_Geno) <- dam_id
       
-      dpc_row <- rownames(true_haplotypes)[sapply(rownames(true_haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% dpc_id]
-      dpc_haplotypes_i <- true_haplotypes[dpc_row,]
-      Dpc_Hap1 <- t(as.data.frame(dpc_haplotypes_i[1,]))
-      rownames(Dpc_Hap1) <- dpc_id
-      Dpc_Hap2 <- t(as.data.frame(dpc_haplotypes_i[2,]))
-      rownames(Dpc_Hap2) <- dpc_id
-      Dpc_Geno <- matrix(data = Dpc_Hap1 + Dpc_Hap2, nrow = 1)
-      colnames(Dpc_Geno) <- colnames(Dpc_Hap1)
-      rownames(Dpc_Geno) <- dpc_id
+      sire_row <- rownames(true_haplotypes)[sapply(rownames(true_haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% sire_id]
+      sire_haplotypes_i <- true_haplotypes[sire_row,]
+      sire_Hap1 <- t(as.data.frame(sire_haplotypes_i[1,]))
+      rownames(sire_Hap1) <- sire_id
+      sire_Hap2 <- t(as.data.frame(sire_haplotypes_i[2,]))
+      rownames(sire_Hap2) <- sire_id
+      sire_Geno <- matrix(data = sire_Hap1 + sire_Hap2, nrow = 1)
+      colnames(sire_Geno) <- colnames(sire_Hap1)
+      rownames(sire_Geno) <- sire_id
       
       method_results <- list()
       length_results <- list()
@@ -505,11 +503,11 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         Offspring_Hap1_chr <- Offspring_Hap1[, colnames(Offspring_Hap1) %in% Chr_markerNames, drop = FALSE]
         Offspring_Hap2_chr <- Offspring_Hap2[, colnames(Offspring_Hap2) %in% Chr_markerNames, drop = FALSE]
         Maternal_Geno_chr <- Maternal_Geno[, colnames(Maternal_Geno) %in% Chr_markerNames, drop = FALSE]
-        Dpc_Geno_chr <- Dpc_Geno[, colnames(Dpc_Geno) %in% Chr_markerNames, drop = FALSE]
+        sire_Geno_chr <- sire_Geno[, colnames(sire_Geno) %in% Chr_markerNames, drop = FALSE]
         
-        scores_h1_p <- weighing_haplotypes(Offspring_Hap1_chr, Dpc_Geno_chr, method = method, j =j)
+        scores_h1_p <- weighing_haplotypes(Offspring_Hap1_chr, sire_Geno_chr, method = method, j =j)
         scores_h1_m <- weighing_haplotypes(Offspring_Hap1_chr, Maternal_Geno_chr, method = method, j =j)
-        scores_h2_p <- weighing_haplotypes(Offspring_Hap2_chr, Dpc_Geno_chr, method = method, j =j)
+        scores_h2_p <- weighing_haplotypes(Offspring_Hap2_chr, sire_Geno_chr, method = method, j =j)
         scores_h2_m <- weighing_haplotypes(Offspring_Hap2_chr, Maternal_Geno_chr, method = method, j =j)
         
         # Combine scores for this method
@@ -583,24 +581,24 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         }
         
         merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
-        identified_dpc_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
+        identified_sire_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
         identified_maternal_haplo <- grep("_maternal$", rownames(merged_haps), value = TRUE)
         
-        dpc_assigned <- merged_haps[identified_dpc_haplo, , drop = FALSE]
+        sire_assigned <- merged_haps[identified_sire_haplo, , drop = FALSE]
         maternal_assigned <- merged_haps[identified_maternal_haplo, , drop = FALSE]
         
-        pat_results[[j]] <- as.data.frame(dpc_assigned)
+        pat_results[[j]] <- as.data.frame(sire_assigned)
         mat_results[[j]] <- as.data.frame(maternal_assigned)
         
         # Combine all scores into one data frame
         testing_methods <- do.call(rbind, scores)
         
         
-        lengths_h1_p <- check_dist(Offspring_Hap1_chr, Dpc_Geno_chr, j =j)
+        lengths_h1_p <- check_dist(Offspring_Hap1_chr, sire_Geno_chr, j =j)
         lengths_h1_p$Parent <- rep("h1_p")
         lengths_h1_m <- check_dist(Offspring_Hap1_chr, Maternal_Geno_chr, j =j)
         lengths_h1_m$Parent <- rep("h1_m")
-        lengths_h2_p <- check_dist(Offspring_Hap2_chr, Dpc_Geno_chr, j =j)
+        lengths_h2_p <- check_dist(Offspring_Hap2_chr, sire_Geno_chr, j =j)
         lengths_h2_p$Parent <- rep("h2_p")
         lengths_h2_m <- check_dist(Offspring_Hap2_chr, Maternal_Geno_chr, j =j)
         lengths_h2_m$Parent <- rep("h2_m")
@@ -658,33 +656,33 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     for (i in 1:nrow(pedigree)) {
       offspring_id <- pedigree$id[i]
-      mother_id <- pedigree$mother[i]
-      dpc_id <- pedigree$dpc[i]
+      dam_id <- pedigree$dam[i]
+      sire_id <- pedigree$sire[i]
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row, ]
       Offspring_Hap1 <- as.data.frame(offspring_haplotypes_i[1, , drop = FALSE])
       Offspring_Hap2 <- as.data.frame(offspring_haplotypes_i[2, , drop = FALSE])
       
-      mother_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% mother_id]
-      mother_haplotypes_i <- haplotypes[mother_row, ]
-      Maternal_Hap1 <- as.data.frame(mother_haplotypes_i[1, , drop = FALSE])
-      rownames(Maternal_Hap1) <- mother_id
-      Maternal_Hap2 <- as.data.frame(mother_haplotypes_i[2, , drop = FALSE])
-      rownames(Maternal_Hap2) <- mother_id
+      dam_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% dam_id]
+      dam_haplotypes_i <- haplotypes[dam_row, ]
+      Maternal_Hap1 <- as.data.frame(dam_haplotypes_i[1, , drop = FALSE])
+      rownames(Maternal_Hap1) <- dam_id
+      Maternal_Hap2 <- as.data.frame(dam_haplotypes_i[2, , drop = FALSE])
+      rownames(Maternal_Hap2) <- dam_id
       Maternal_Geno <- matrix(data = Maternal_Hap1 + Maternal_Hap2, nrow = 1)
       colnames(Maternal_Geno) <- colnames(Maternal_Hap1)
-      rownames(Maternal_Geno) <- mother_id
+      rownames(Maternal_Geno) <- dam_id
       
-      dpc_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% dpc_id]
-      dpc_haplotypes_i <- haplotypes[dpc_row, ]
-      Dpc_Hap1 <- as.data.frame(dpc_haplotypes_i[1, , drop = FALSE])
-      rownames(Dpc_Hap1) <- dpc_id
-      Dpc_Hap2 <- as.data.frame(dpc_haplotypes_i[2, , drop = FALSE])
-      rownames(Dpc_Hap2) <- dpc_id
-      Dpc_Geno <- matrix(data = Dpc_Hap1 + Dpc_Hap2, nrow = 1)
-      colnames(Dpc_Geno) <- colnames(Dpc_Hap1)
-      rownames(Dpc_Geno) <- dpc_id
+      sire_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% sire_id]
+      sire_haplotypes_i <- haplotypes[sire_row, ]
+      sire_Hap1 <- as.data.frame(sire_haplotypes_i[1, , drop = FALSE])
+      rownames(sire_Hap1) <- sire_id
+      sire_Hap2 <- as.data.frame(sire_haplotypes_i[2, , drop = FALSE])
+      rownames(sire_Hap2) <- sire_id
+      sire_Geno <- matrix(data = sire_Hap1 + sire_Hap2, nrow = 1)
+      colnames(sire_Geno) <- colnames(sire_Hap1)
+      rownames(sire_Geno) <- sire_id
       
       method_results <- list()
       length_results <- list()
@@ -699,11 +697,11 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         Offspring_Hap1_chr <- Offspring_Hap1[, colnames(Offspring_Hap1) %in% Chr_markerNames, drop = FALSE]
         Offspring_Hap2_chr <- Offspring_Hap2[, colnames(Offspring_Hap2) %in% Chr_markerNames, drop = FALSE]
         Maternal_Geno_chr <- Maternal_Geno[, colnames(Maternal_Geno) %in% Chr_markerNames, drop = FALSE]
-        Dpc_Geno_chr <- Dpc_Geno[, colnames(Dpc_Geno) %in% Chr_markerNames, drop = FALSE]
+        sire_Geno_chr <- sire_Geno[, colnames(sire_Geno) %in% Chr_markerNames, drop = FALSE]
         
-        scores_h1_p <- weighing_haplotypes(Offspring_Hap1_chr, Dpc_Geno_chr, method = method, j =j)
+        scores_h1_p <- weighing_haplotypes(Offspring_Hap1_chr, sire_Geno_chr, method = method, j =j)
         scores_h1_m <- weighing_haplotypes(Offspring_Hap1_chr, Maternal_Geno_chr, method = method, j =j)
-        scores_h2_p <- weighing_haplotypes(Offspring_Hap2_chr, Dpc_Geno_chr, method = method, j =j)
+        scores_h2_p <- weighing_haplotypes(Offspring_Hap2_chr, sire_Geno_chr, method = method, j =j)
         scores_h2_m <- weighing_haplotypes(Offspring_Hap2_chr, Maternal_Geno_chr, method = method, j =j)
         
         # Combine scores for this method
@@ -793,24 +791,24 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         
         
         merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
-        identified_dpc_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
+        identified_sire_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
         identified_maternal_haplo <- grep("_maternal$", rownames(merged_haps), value = TRUE)
         
-        dpc_assigned <- merged_haps[identified_dpc_haplo, , drop = FALSE]
+        sire_assigned <- merged_haps[identified_sire_haplo, , drop = FALSE]
         maternal_assigned <- merged_haps[identified_maternal_haplo, , drop = FALSE]
         
-        pat_results[[j]] <- as.data.frame(dpc_assigned)
+        pat_results[[j]] <- as.data.frame(sire_assigned)
         mat_results[[j]] <- as.data.frame(maternal_assigned)
         
         # Combine all scores into one data frame
         testing_methods <- do.call(rbind, scores)
         
         
-        lengths_h1_p <- check_dist(Offspring_Hap1_chr, Dpc_Geno_chr, j =j)
+        lengths_h1_p <- check_dist(Offspring_Hap1_chr, sire_Geno_chr, j =j)
         lengths_h1_p$Parent <- rep("h1_p")
         lengths_h1_m <- check_dist(Offspring_Hap1_chr, Maternal_Geno_chr, j =j)
         lengths_h1_m$Parent <- rep("h1_m")
-        lengths_h2_p <- check_dist(Offspring_Hap2_chr, Dpc_Geno_chr, j =j)
+        lengths_h2_p <- check_dist(Offspring_Hap2_chr, sire_Geno_chr, j =j)
         lengths_h2_p$Parent <- rep("h2_p")
         lengths_h2_m <- check_dist(Offspring_Hap2_chr, Maternal_Geno_chr, j =j)
         lengths_h2_m$Parent <- rep("h2_m")
@@ -853,22 +851,22 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     for (i in 1:nrow(pedigree)) {
       offspring_id <- pedigree$id[i]
-      mother_id <- pedigree$mother[i]
+      dam_id <- pedigree$dam[i]
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row,]
       Offspring_Hap1 <- t(as.data.frame(offspring_haplotypes_i[1,]))
       Offspring_Hap2 <- t(as.data.frame(offspring_haplotypes_i[2,]))
       
-      mother_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% mother_id]
-      mother_haplotypes_i <- haplotypes[mother_row,]
-      Maternal_Hap1 <- t(as.data.frame(mother_haplotypes_i[1,]))
-      rownames(Maternal_Hap1) <- mother_id
-      Maternal_Hap2 <- t(as.data.frame(mother_haplotypes_i[2,]))
-      rownames(Maternal_Hap2) <- mother_id
+      dam_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% dam_id]
+      dam_haplotypes_i <- haplotypes[dam_row,]
+      Maternal_Hap1 <- t(as.data.frame(dam_haplotypes_i[1,]))
+      rownames(Maternal_Hap1) <- dam_id
+      Maternal_Hap2 <- t(as.data.frame(dam_haplotypes_i[2,]))
+      rownames(Maternal_Hap2) <- dam_id
       Maternal_Geno <- matrix(data = Maternal_Hap1 + Maternal_Hap2, nrow = 1)
       colnames(Maternal_Geno) <- colnames(Maternal_Hap1)
-      rownames(Maternal_Geno) <- mother_id
+      rownames(Maternal_Geno) <- dam_id
       
       method_results <- list()
       length_results <- list()
@@ -913,13 +911,13 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         }
         
         merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
-        identified_dpc_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
+        identified_sire_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
         identified_maternal_haplo <- grep("_maternal$", rownames(merged_haps), value = TRUE)
         
-        dpc_assigned <- merged_haps[identified_dpc_haplo, , drop = FALSE]
+        sire_assigned <- merged_haps[identified_sire_haplo, , drop = FALSE]
         maternal_assigned <- merged_haps[identified_maternal_haplo, , drop = FALSE]
         
-        pat_results[[j]] <- as.data.frame(dpc_assigned)
+        pat_results[[j]] <- as.data.frame(sire_assigned)
         mat_results[[j]] <- as.data.frame(maternal_assigned)
         
         # Combine all scores into one data frame
@@ -978,20 +976,20 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     for (i in 1:nrow(pedigree)) {
       offspring_id <- pedigree$id[i]
-      mother_id <- pedigree$mother[i]
+      dam_id <- pedigree$dam[i]
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row, ]
       Offspring_Hap1 <- as.data.frame(offspring_haplotypes_i[1, , drop = FALSE])
       Offspring_Hap2 <- as.data.frame(offspring_haplotypes_i[2, , drop = FALSE])
       
-      mother_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% mother_id]
-      mother_haplotypes_i <- haplotypes[mother_row, ]
-      Maternal_Hap1 <- as.data.frame(mother_haplotypes_i[1, , drop = FALSE])
-      Maternal_Hap2 <- as.data.frame(mother_haplotypes_i[2, , drop = FALSE])
+      dam_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% dam_id]
+      dam_haplotypes_i <- haplotypes[dam_row, ]
+      Maternal_Hap1 <- as.data.frame(dam_haplotypes_i[1, , drop = FALSE])
+      Maternal_Hap2 <- as.data.frame(dam_haplotypes_i[2, , drop = FALSE])
       Maternal_Geno <- matrix(data = Maternal_Hap1 + Maternal_Hap2, nrow = 1)
       colnames(Maternal_Geno) <- colnames(Maternal_Hap1)
-      rownames(Maternal_Geno) <- mother_id  
+      rownames(Maternal_Geno) <- dam_id  
       
       
       method_results <- list()
@@ -1035,13 +1033,13 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         }
         
         merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
-        identified_dpc_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
+        identified_sire_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
         identified_maternal_haplo <- grep("_maternal$", rownames(merged_haps), value = TRUE)
         
-        dpc_assigned <- merged_haps[identified_dpc_haplo, , drop = FALSE]
+        sire_assigned <- merged_haps[identified_sire_haplo, , drop = FALSE]
         maternal_assigned <- merged_haps[identified_maternal_haplo, , drop = FALSE]
         
-        pat_results[[j]] <- as.data.frame(dpc_assigned)
+        pat_results[[j]] <- as.data.frame(sire_assigned)
         mat_results[[j]] <- as.data.frame(maternal_assigned)
         
         testing_methods <- do.call(rbind, scores)
@@ -1141,23 +1139,27 @@ check_haplotype_postFlip <- function(complete_haplotypes = NULL, results = NULL,
 #**** Get the true simulated haplotypes and phased haplotypes ******
 #####################################################################################
 
-Simulated_SP <- load("/Data/SP_object.Rdata")
-Simulated_pop <- laod("/Data/Pop_withFather.Rdata")
-true_haplotypes <- pullSnpHaplo(PopMerged_Fathers)
+load(paste0(workingDir,"/Data/SP_object.Rdata"))
+Simulated_SP <- SP
+Simulated_pop <- load(paste0(workingDir,"/Data/Pop_withFathers.Rdata"))
+true_haplotypes <- pullSnpHaplo(PopMerged)
 true_map <- getGenMap(SP)
 
-#Example of getting phased haplotypes - still need to write the others - made in script 6_Converting_phased_VCF
-nGE_SNPn_WithPED_haplotypes_PHASED <- read.txt("/LOCATION OF FILE/nGE_SNPn_WithPED_haplotypes_PHASED.txt")
-
 #Pedigree prior to reconstruction 
-Sim_pedigree_pre <- read.csv("/Data/worker_pedigree.csv")
+Sim_pedigree_pre <- read.csv(paste0(workingDir,"/Data/worker_pedigree.csv"))
 
 #Pedigree post reconstruction (with AlphaAssign)
-Alpha_pedigree_2k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt")
-Alpha_pedigree_50k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt")
+Alpha_pedigree_2k_NoGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt"))
+Alpha_pedigree_50k_NoGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt"))
 
-Alpha_pedigree_2k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt")
-Alpha_pedigree_50k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt")
+Alpha_pedigree_2k_WithGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt"))
+Alpha_pedigree_50k_WithGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt"))
+
+cols <- c("id", "sire", "dam")
+names(Alpha_pedigree_2k_NoGE) <- cols
+names(Alpha_pedigree_50k_NoGE) <- cols
+names(Alpha_pedigree_2k_WithGE) <- cols
+names(Alpha_pedigree_50k_WithGE) <- cols
 
 #Get haplotypes made in 6_Converting_PhasedVCF scripts
 NoGE_SNP2k_PhasedHaplotypes_WithPed <- read.table("FILELOCATI|ON/NoGE_SNP2k_PhasedHaplotypes_WithPed.txt")
@@ -1170,8 +1172,8 @@ WithGE_SNP2k_PhasedHaplotypes_NoPed <- read.table("FILELOCATI|ON/WithGE_SNP2k_Ph
 NoGE_SNP50k_PhasedHaplotypes_NoPed <- read.table("FILELOCATI|ON/NoGE_SNP50k_PhasedHaplotypes_NoPed.txt")
 WithGE_SNP50k_PhasedHaplotypes_NoPed <- read.table("FILELOCATI|ON/WithGE_SNP50k_PhasedHaplotypes_NoPed.txt")
 
-NoGE_map <- read.table("Data/Sim_NoGE/SNP_5_NoGE_QC_ACformat.map")
-WithGE_map <- read.table("Data/Sim_WithGE/SNP_5_NoGE_QC_ACformat.map")
+NoGE_map <- read.table("/Data/Sim_NoGE/SNP_5_NoGE_QC_ACformat.map")
+WithGE_map <- read.table("/Data/Sim_WithGE/SNP_5_NoGE_QC_ACformat.map")
                                               
 
 #####################################################################################
@@ -1179,12 +1181,12 @@ WithGE_map <- read.table("Data/Sim_WithGE/SNP_5_NoGE_QC_ACformat.map")
 #####################################################################################
 
 # Pedigree prior to ped reconstruction
-Slov_pedigree_pre <- read.table("~/Desktop/lstrachan_patrilines/Data/Real_data/AlphaAssign/Pedigree.txt")
-colnames(Slov_pedigree_pre) <- c("id","dpc","mother")
+Slov_pedigree_pre <- read.table("/Data/Real_data/AlphaAssign/Pedigree.txt")
+colnames(Slov_pedigree_pre) <- cols
 
 #After reconstruction
-Slov_pedigree_post <- read.table("Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
-colnames(Slov_pedigree_post) <- c("id","dpc","mother")
+Slov_pedigree_post <- read.table("/Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
+colnames(Slov_pedigree_post) <- cols
 
 Slov_PhasedHaplotypes_WithPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_WithPed.txt")
 Slov_PhasedHaplotypes_NoPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_NoPed.txt")
@@ -1192,7 +1194,7 @@ Slov_PhasedHaplotypes_NoPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_N
 #get the pre-phased data for comparison
 Slov_haplotypes_Prephased <- read.table("FILELOCATION/ Slov_haplotypes_Prephased.txt")
 
-Slov_map <- read.table("ADD NAME HERE")
+Slov_map <- read.table("/Data/Real_data/Slov_fM_AC_QC.map")
 
 #####################################################################################
 #*** Check the different phasing versions compared to the real and prephased data just to check similarity ***
@@ -1226,17 +1228,25 @@ prephase_vs_Slov_PhasedHaplotypes_NoPed <-  check_haplotype(true_haplotypes = Sl
 
 #True haplotypes (should work perfectly)
 Route1_SimTrue <- Route1_flipping(perfect_haplotypes = TRUE, pedigree = Sim_pedigree_pre, method = "power_mean")
+dir.create("/Data/Haplo_Assignment")
+write.csv("/Data/Haplo_Assignment/Route1_SimTrue.csv")
 
 #2k SNP
 Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_NoGE, method = "power_mean", Data_type = "NoGE_SNP2k")
 Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
+write.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP2k.csv")
+write.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP2k.csv")
 
 #50k SNP
 Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_NoGE, method = "power_mean", Data_type = "NoGE_SNP50k")
 Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_WithGE, method = "power_mean", Data_type = "WithGE_SNP50k")
+write.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP50k.csv")
+write.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP50k.csv")
 
 #Real data
 Route1_Real <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_post, methods = "power_mean", Data_type = "Real_Slov_data")
+write.csv("/Data/Haplo_Assignment/Route1_Real.csv")
+
 
 # #Checking haplotypes post flip to see if something has happened
 # colnames(Route1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
@@ -1251,17 +1261,22 @@ Route1_Real <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedig
 
 #True haplotypes (should work perfectly)
 Route2_SimTrue <- Route2_flipping(perfect_haplotypes = TRUE, pedigree = Sim_pedigree_pre, method = "power_mean")
-
+write.csv("/Data/Haplo_Assignment/Route2_SimTrue.csv")
 #2k SNP
 Route2_NoGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_NoGE, method = "power_mean",Data_type = "NoGE_SNP2k")
 Route2_WithGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
-
+write.csv("/Data/Haplo_Assignment/Route2_NoGE_SNP2k.csv")
+write.csv("/Data/Haplo_Assignment/Route2_WithGE_SNP2k.csv")
 #50k SNP
 Route2_NoGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_NoGE, method = "power_mean", Data_type = "NoGE_SNP50k")
 Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
+write.csv("/Data/Haplo_Assignment/Route2_NoGE_SNP50k.csv")
+write.csv("/Data/Haplo_Assignment/Route2_WithGE_SNP50k.csv")
 
 #Real data
 Route2_Real <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_post, methods = "power_mean", Data_type = "Real_Slov_data")
+write.csv("/Data/Haplo_Assignment/Route2_Real.csv")
+
 
 
 
