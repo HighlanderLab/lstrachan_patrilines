@@ -264,8 +264,10 @@ order_by_prefix <- function(df) {
 }
 
 check_haplotype <- function(true_haplotypes = NULL, results = NULL, pedigree = NULL) {
+  
   comparison_results <- data.frame()
   
+  # Align columns between true and predicted data
   cols <- colnames(results)
   true_haplotypes_cols <- true_haplotypes[, cols, drop = FALSE]
   
@@ -274,59 +276,92 @@ check_haplotype <- function(true_haplotypes = NULL, results = NULL, pedigree = N
   for (i in seq_along(offspring_ids)) {
     offspring_id <- offspring_ids[i]
     
-    # Pull rows starting with offspring_id from the real haplotypes and results
-    real_haplo_maternal <- rownames(true_haplotypes_cols)[grep(paste0("^", offspring_id, "_1"), rownames(true_haplotypes_cols))]
-    real_haplo_maternal <- true_haplotypes_cols[real_haplo_maternal, , drop = FALSE]
+    # 1. Extract TRUE haplotypes
+    real_haplo_maternal <- true_haplotypes_cols[grep(paste0("^", offspring_id, "_1"), 
+                                                     rownames(true_haplotypes_cols)), , drop = FALSE]
+    real_haplo_paternal <- true_haplotypes_cols[grep(paste0("^", offspring_id, "_2"), 
+                                                     rownames(true_haplotypes_cols)), , drop = FALSE]
     
-    real_haplo_paternal <- rownames(true_haplotypes_cols)[grep(paste0("^", offspring_id, "_2"), rownames(true_haplotypes_cols))]
-    real_haplo_paternal <- true_haplotypes_cols[real_haplo_paternal, , drop = FALSE]
-    
-    results_maternal <- rownames(results)[grep(paste0("^", offspring_id, "_1"), rownames(results))]
-    results_maternal <- results[results_maternal, , drop = FALSE]
-    
-    results_paternal <- rownames(results)[grep(paste0("^", offspring_id, "_2"), rownames(results))]
-    results_paternal <- results[results_paternal, , drop = FALSE]
-    
-    # Compare haplotypes
-    maternal_comparison <- as.data.frame(matrix(NA, nrow = 1, ncol = 2))
-    rownames(maternal_comparison) <- rownames(results_maternal)
-    colnames(maternal_comparison) <- c("_1", "_2")
+    # 2. Extract PREDICTED haplotypes
+    results_maternal <- results[grep(paste0("^", offspring_id, "_1"), 
+                                     rownames(results)), , drop = FALSE]
+    results_paternal <- results[grep(paste0("^", offspring_id, "_2"), 
+                                     rownames(results)), , drop = FALSE]
     
     total_elements <- length(results_maternal)
     
-    maternal_comparison$`_1` <- (sum(results_maternal == real_haplo_maternal, na.rm = TRUE)/total_elements) * 100
-    maternal_comparison$`_2` <- (sum(results_maternal == real_haplo_paternal, na.rm = TRUE)/total_elements) * 100
+    # 3. Compare maternal predictions
+    maternal_comparison <- as.data.frame(matrix(NA, nrow = 1, ncol = 2))
+    colnames(maternal_comparison) <- c("_1", "_2")
+    # CRITICAL: Re-add rownames so grep works later
+    rownames(maternal_comparison) <- rownames(results_maternal) 
     
+    maternal_comparison$`_1` <- (sum(results_maternal == real_haplo_maternal, na.rm = TRUE) / total_elements) * 100
+    maternal_comparison$`_2` <- (sum(results_maternal == real_haplo_paternal, na.rm = TRUE) / total_elements) * 100
+    
+    # 4. Compare paternal predictions
     paternal_comparison <- as.data.frame(matrix(NA, nrow = 1, ncol = 2))
-    rownames(paternal_comparison) <- rownames(results_paternal)
     colnames(paternal_comparison) <- c("_1", "_2")
+    # CRITICAL: Re-add rownames so grep works later
+    rownames(paternal_comparison) <- rownames(results_paternal)
     
-    paternal_comparison$`_1` <- (sum(results_paternal == real_haplo_maternal)/total_elements) * 100
-    paternal_comparison$`_2` <- (sum(results_paternal == real_haplo_paternal)/total_elements) * 100
+    paternal_comparison$`_1` <- (sum(results_paternal == real_haplo_maternal, na.rm = TRUE) / total_elements) * 100
+    paternal_comparison$`_2` <- (sum(results_paternal == real_haplo_paternal, na.rm = TRUE) / total_elements) * 100
     
-    # Combine results for current offspring_id
+    # 5. Store results
     current_comparison <- rbind(maternal_comparison, paternal_comparison)
-    
-    # Append current_comparison to comparison_results
     comparison_results <- rbind(comparison_results, current_comparison)
   }
-  # Check conditions and print messages
-  comparison_results_maternal <- rownames(comparison_results)[grep(paste0("_1"), rownames(comparison_results))]
-  comparison_results_maternal <- comparison_results[comparison_results_maternal, , drop = FALSE]
   
-  comparison_results_paternal <- rownames(comparison_results)[grep(paste0("_2"), rownames(comparison_results))]
-  comparison_results_paternal <- comparison_results[comparison_results_paternal, , drop = FALSE]
+  # Split results into maternal and paternal prediction sets
+  # This relies on the rownames we assigned inside the loop
+  comparison_results_maternal <- comparison_results[grep("_1$", rownames(comparison_results)), , drop = FALSE]
+  comparison_results_paternal <- comparison_results[grep("_2$", rownames(comparison_results)), , drop = FALSE]
   
-  maternal_correct <- all(comparison_results_maternal[, "_1"] > comparison_results_maternal[, "_2"])
-  paternal_correct <- all(comparison_results_paternal[, "_1"] < comparison_results_paternal[, "_2"])
+  # Create summary table
+  summary_stats <- data.frame(
+    comparison = c(
+      "true_maternal vs predicted_maternal",
+      "true_paternal vs predicted_maternal",
+      "true_maternal vs predicted_paternal",
+      "true_paternal vs predicted_paternal"
+    ),
+    percent = c(
+      mean(comparison_results_maternal$`_1`, na.rm = TRUE),
+      mean(comparison_results_maternal$`_2`, na.rm = TRUE),
+      mean(comparison_results_paternal$`_1`, na.rm = TRUE),
+      mean(comparison_results_paternal$`_2`, na.rm = TRUE)
+    )
+  )
   
-  print(mean(comparison_results_maternal$`_1`))
-  print(mean(comparison_results_maternal$`_2`))
-  print(mean(comparison_results_paternal$`_1`))
-  print(mean(comparison_results_paternal$`_2`))
+  print(summary_stats)
   
-  return(comparison_results)
+  return(list(
+    comparison_table = comparison_results,
+    summary = summary_stats
+  ))
 }
+# ------------------------------------------------------------
+# KEY STEPS IN `check_haplotype()`:
+# ------------------------------------------------------------
+# 1. Align true haplotypes with result columns.
+#
+# 2. For each offspring:
+#     - Extract true and predicted maternal and paternal haplotypes.
+#     - Compare all true vs predicted combinations.
+#
+# 3. Compute MATCHING PERCENTAGE:
+#     - % of identical SNP/haplotype entries between two matrices.
+#     - (matches / total elements) × 100 → direct concordance.
+#
+# 4. Store per-offspring maternal and paternal comparison results.
+#
+# 5. Summarise mean % matching across all individuals.
+#
+# OUTPUT:
+# - Per-offspring haplotype concordance (% matching)
+# - Summary table of mean true vs predicted matching percentages
+# ------------------------------------------------------------
 
 weighing_haplotypes <- function(off_hap, par_geno, method = NULL, result = NULL, j){
   
@@ -459,9 +494,9 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     
     for (i in 1:nrow(pedigree)) {
-      offspring_id <- pedigree$id[i]
-      dam_id <- pedigree$dam[i]
-      sire_id <- pedigree$sire[i]
+      offspring_id <- as.character(pedigree$id[i])
+      dam_id <- as.character(pedigree$mother[i])
+      sire_id <- as.character(pedigree$dpc[i])
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row,]
@@ -638,19 +673,19 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     flipped_haplotypes <- list()
     
     if (Data_type == "NoGE_SNP2k"){
-      haplotypes <- NoGE_SNP2k_PhasedHaplotypes_WithPed
-      map <- NoGE_map
+      haplotypes <- NoGE_SNP2k_PhasedHaplotypes_recPed
+      map <- NoGE_map_2k
     } else if (Data_type == "WithGE_SNP2k"){
-      haplotypes <- WithGE_SNP2k_PhasedHaplotypes_WithPed
-      map <- WithGE_map
+      haplotypes <- WithGE_SNP2k_PhasedHaplotypes_recPed
+      map <- WithGE_map_2k
     } else if (Data_type == "NoGE_SNP50k"){
-      haplotypes <- NoGE_SNP50k_PhasedHaplotypes_WithPed
-      map <- NoGE_map
+      haplotypes <- NoGE_SNP50k_PhasedHaplotypes_recPed
+      map <- NoGE_map_50k
     }else if (Data_type == "WithGE_SNP50k"){
-      haplotypes <- WithGE_SNP50k_PhasedHaplotypes_WithPed
-      map <- WithGE_map
+      haplotypes <- WithGE_SNP50k_PhasedHaplotypes_recPed
+      map <- WithGE_map_50k
     }else if (Data_type == "Real_Slov_data"){
-      haplotypes <- Slov_phasedhaplotypes_phasedwithPed
+      haplotypes <- Slov_phasedhaplotypes_phasedrecPed
       map <- Slov_map
     } else (stop("Arguments not met"))
     
@@ -958,19 +993,19 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     flipped_haplotypes <- list()
     
     if (Data_type == "NoGE_SNP2k"){
-      haplotypes <- NoGE_SNP2k_PhasedHaplotypes_NoPed
+      haplotypes <- NoGE_SNP2k_PhasedHaplotypes_matPed
       map <- NoGE_map
     } else if (Data_type == "WithGE_SNP2k"){
-      haplotypes <- WithGE_SNP2k_PhasedHaplotypes_NoPed
+      haplotypes <- WithGE_SNP2k_PhasedHaplotypes_matPed
       map <- WithGE_map
     } else if (Data_type == "NoGE_SNP50k"){
-      haplotypes <- NoGE_SNP50k_PhasedHaplotypes_NoPed
+      haplotypes <- NoGE_SNP50k_PhasedHaplotypes_matPed
       map <- NoGE_map
     }else if (Data_type == "WithGE_SNP50k"){
-      haplotypes <- WithGE_SNP50k_PhasedHaplotypes_NoPed
+      haplotypes <- WithGE_SNP50k_PhasedHaplotypes_matPed
       map <- WithGE_map
     }else if (Data_type == "Real_Slov_data"){
-      haplotypes <- Slov_phasedhaplotypes_phasedNoPed
+      haplotypes <- Slov_phasedhaplotypes_phasedmatPed
       map <- Slov_map
     } else (stop("Arguments not met"))
     
@@ -1145,51 +1180,54 @@ Simulated_pop <- load(paste0(workingDir,"/Data/Pop_withFathers.Rdata"))
 true_haplotypes <- pullSnpHaplo(PopMerged)
 true_map <- getGenMap(SP)
 
-#Pedigree prior to reconstruction 
-Sim_pedigree_pre <- read.csv(paste0(workingDir,"/Data/worker_pedigree.csv"))
+#Pedigree prior to reconstruction ####################################################
 
-#Pedigree post reconstruction (with AlphaAssign)
-Alpha_pedigree_2k_NoGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt"))
-Alpha_pedigree_50k_NoGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt"))
+Worker_pedigree <- read.csv("Data/worker_pedigree.csv")
 
-Alpha_pedigree_2k_WithGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt"))
-Alpha_pedigree_50k_WithGE <- read.table(paste0(workingDir,"/Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt"))
+#Pedigree post reconstruction (with AlphaAssign) ########################################
+Rec_pedigree_2k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt")
+Rec_pedigree_50k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt")
+
+Rec_pedigree_2k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt")
+Rec_pedigree_50k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt")
 
 cols <- c("id", "sire", "dam")
-names(Alpha_pedigree_2k_NoGE) <- cols
-names(Alpha_pedigree_50k_NoGE) <- cols
-names(Alpha_pedigree_2k_WithGE) <- cols
-names(Alpha_pedigree_50k_WithGE) <- cols
+names(Rec_pedigree_2k_NoGE) <- cols
+names(Rec_pedigree_50k_NoGE) <- cols
+names(Rec_pedigree_2k_WithGE) <- cols
+names(Rec_pedigree_50k_WithGE) <- cols
+
 
 #Get haplotypes made in 6_Converting_PhasedVCF scripts
-NoGE_SNP2k_PhasedHaplotypes_WithPed <- read.table("FILELOCATI|ON/NoGE_SNP2k_PhasedHaplotypes_WithPed.txt")
-WithGE_SNP2k_PhasedHaplotypes_WithPed <- read.table("FILELOCATI|ON/WithGE_SNP2k_PhasedHaplotypes_WithPed.txt")
-NoGE_SNP50k_PhasedHaplotypes_WithPed <- read.table("FILELOCATI|ON/NoGE_SNP50k_PhasedHaplotypes_WithPed.txt")
-WithGE_SNP50k_PhasedHaplotypes_WithPed <- read.table("FILELOCATI|ON/WithGE_SNP50k_PhasedHaplotypes_WithPed.txt")
+NoGE_SNP2k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/NoGE_SNP2k_PhasedHaplotypes_recPed.txt")
+WithGE_SNP2k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/WithGE_SNP2k_PhasedHaplotypes_recPed.txt")
+NoGE_SNP50k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/NoGE_SNP50k_PhasedHaplotypes_recPed.txt")
+WithGE_SNP50k_PhasedHaplotypes_recPed <- read.table("FILELOCATI|ON/WithGE_SNP50k_PhasedHaplotypes_recPed.txt")
 
-NoGE_SNP2k_PhasedHaplotypes_NoPed <- read.table("FILELOCATI|ON/NoGE_SNP2k_PhasedHaplotypes_NoPed.txt")
-WithGE_SNP2k_PhasedHaplotypes_NoPed <- read.table("FILELOCATI|ON/WithGE_SNP2k_PhasedHaplotypes_NoPed.txt")
-NoGE_SNP50k_PhasedHaplotypes_NoPed <- read.table("FILELOCATI|ON/NoGE_SNP50k_PhasedHaplotypes_NoPed.txt")
-WithGE_SNP50k_PhasedHaplotypes_NoPed <- read.table("FILELOCATI|ON/WithGE_SNP50k_PhasedHaplotypes_NoPed.txt")
+NoGE_SNP2k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/NoGE_SNP2k_PhasedHaplotypes_matPed.txt")
+WithGE_SNP2k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/WithGE_SNP2k_PhasedHaplotypes_matPed.txt")
+NoGE_SNP50k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/NoGE_SNP50k_PhasedHaplotypes_matPed.txt")
+WithGE_SNP50k_PhasedHaplotypes_matPed <- read.table("FILELOCATI|ON/WithGE_SNP50k_PhasedHaplotypes_matPed.txt")
 
-NoGE_map <- read.table("/Data/Sim_NoGE/SNP_5_NoGE_QC_ACformat.map")
-WithGE_map <- read.table("/Data/Sim_WithGE/SNP_5_NoGE_QC_ACformat.map")
-                                              
+NoGE_map_2k <- read.table("Data/Sim_NoGE/SNP_4_NoGE_QC_ACformat.map")
+WithGE_map_2k <- read.table("Data/Sim_WithGE/SNP_4_WithGE_QC_ACformat.map")
+NoGE_map_50k <- read.table("Data/Sim_NoGE/SNP_5_NoGE_QC_ACformat.map")
+WithGE_map_50k <- read.table("Data/Sim_WithGE/SNP_5_WithGE_QC_ACformat.map")
 
 #####################################################################################
 #**** Get the real data phased haplotypes ******
 #####################################################################################
-
+setwd(workingDir)
 # Pedigree prior to ped reconstruction
-Slov_pedigree_pre <- read.table("/Data/Real_data/AlphaAssign/Pedigree.txt")
+Slov_pedigree_pre <- read.table("Data/Real_data/Real_Data_pedigree.txt")
 colnames(Slov_pedigree_pre) <- cols
 
 #After reconstruction
-Slov_pedigree_post <- read.table("/Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
+Slov_pedigree_post <- read.table("Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
 colnames(Slov_pedigree_post) <- cols
 
-Slov_PhasedHaplotypes_WithPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_WithPed.txt")
-Slov_PhasedHaplotypes_NoPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_NoPed.txt")
+Slov_PhasedHaplotypes_recPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_recPed.txt")
+Slov_PhasedHaplotypes_matPed <- read.table("FILELOCATION/ Slov_PhasedHaplotypes_matPed.txt")
 
 #get the pre-phased data for comparison
 Slov_haplotypes_Prephased <- read.table("FILELOCATION/ Slov_haplotypes_Prephased.txt")
@@ -1201,23 +1239,23 @@ Slov_map <- read.table("/Data/Real_data/Slov_fM_AC_QC.map")
 #####################################################################################
 
 # ••• Simulated •••
-true_vs_NoGEphasedSNP2kWithPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_WithPed, pedigree = Alpha_pedigree_2k_NoGE )
-true_vs_NoGEphasedSNP2kNoPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_NoPed, pedigree = Sim_pedigree_pre)
+true_vs_NoGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_2k_NoGE )
+true_vs_NoGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Mat_pedigree)
 
-true_vs_WithGEphasedSNP2kWithPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_WithPed, pedigree = Alpha_pedigree_2k_WithGE )
-true_vs_WithGEphasedSNP2kNoPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_NoPed, pedigree = Sim_pedigree_pre)
+true_vs_WithGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_2k_WithGE )
+true_vs_WithGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Mat_pedigree)
 
 
-true_vs_NoGEphasedSNP50kWithPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_WithPed, pedigree = Alpha_pedigree_50k_NoGE )
-true_vs_NoGEphasedSNP50kNoPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_NoPed, pedigree = Sim_pedigree_pre)
+true_vs_NoGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_50k_NoGE )
+true_vs_NoGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Mat_pedigree)
 
-true_vs_WithGEphasedSNP50kWithPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_WithPed, pedigree = Alpha_pedigree_50k_WithGE )
-true_vs_WithGEphasedSNP50kNoPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_NoPed, pedigree = Sim_pedigree_pre)
+true_vs_WithGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_50k_WithGE )
+true_vs_WithGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Mat_pedigree)
 
 # ••• Real data - prephase vs postphase ••• - don't know if this will work. Probably isn't essential info to know
 
-prephase_vs_Slov_PhasedHaplotypes_WithPed <-  check_haplotype(true_haplotypes = Slov_haplotypes_Prephased, results = Slov_PhasedHaplotypes_WithPed, pedigree = Slov_pedigree_post)
-prephase_vs_Slov_PhasedHaplotypes_NoPed <-  check_haplotype(true_haplotypes = Slov_haplotypes_Prephased, results = Slov_PhasedHaplotypes_NoPed, pedigree = Slov_pedigree_pre)
+prephase_vs_Slov_PhasedHaplotypes_recPed <-  check_haplotype(true_haplotypes = Slov_haplotypes_Prephased, results = Slov_PhasedHaplotypes_recPed, pedigree = Slov_pedigree_post)
+prephase_vs_Slov_PhasedHaplotypes_matPed <-  check_haplotype(true_haplotypes = Slov_haplotypes_Prephased, results = Slov_PhasedHaplotypes_matPed, pedigree = Slov_pedigree_pre)
 
 
 #####################################################################################
@@ -1227,19 +1265,19 @@ prephase_vs_Slov_PhasedHaplotypes_NoPed <-  check_haplotype(true_haplotypes = Sl
 #####################################################################################
 
 #True haplotypes (should work perfectly)
-Route1_SimTrue <- Route1_flipping(perfect_haplotypes = TRUE, pedigree = Sim_pedigree_pre, method = "power_mean")
-dir.create("/Data/Haplo_Assignment")
-write.csv("/Data/Haplo_Assignment/Route1_SimTrue.csv")
+Route1_SimTrue <- Route1_flipping(perfect_haplotypes = TRUE, pedigree = Worker_pedigree, method = "power_mean")
+dir.create("Data/Haplo_Assignment")
+save(Route1_SimTrue, file = "Data/Haplo_Assignment/Route1_SimTrue.Rdata")
 
 #2k SNP
-Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_NoGE, method = "power_mean", Data_type = "NoGE_SNP2k")
-Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
+Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE, method = "power_mean", Data_type = "NoGE_SNP2k")
+Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
 write.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP2k.csv")
 write.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP2k.csv")
 
 #50k SNP
-Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_NoGE, method = "power_mean", Data_type = "NoGE_SNP50k")
-Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_WithGE, method = "power_mean", Data_type = "WithGE_SNP50k")
+Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE, method = "power_mean", Data_type = "NoGE_SNP50k")
+Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE, method = "power_mean", Data_type = "WithGE_SNP50k")
 write.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP50k.csv")
 write.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP50k.csv")
 
@@ -1252,7 +1290,7 @@ write.csv("/Data/Haplo_Assignment/Route1_Real.csv")
 # colnames(Route1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
 # 
 #Example:
-# true_vs_NoGE_SNP2k_FLIPPED <- check_haplotype_postFlip(complete_haplotypes = Route1_SimTrue$real_results_flipped, results = Route1_NoGE_SNP2k$results_flipped, pedigree = Alpha_pedigree_2k_NoGE)
+# true_vs_NoGE_SNP2k_FLIPPED <- check_haplotype_postFlip(complete_haplotypes = Route1_SimTrue$real_results_flipped, results = Route1_NoGE_SNP2k$results_flipped, pedigree = Rec_pedigree_2k_NoGE)
 # 
 
 #####################################################################################
@@ -1260,16 +1298,16 @@ write.csv("/Data/Haplo_Assignment/Route1_Real.csv")
 #####################################################################################
 
 #True haplotypes (should work perfectly)
-Route2_SimTrue <- Route2_flipping(perfect_haplotypes = TRUE, pedigree = Sim_pedigree_pre, method = "power_mean")
+Route2_SimTrue <- Route2_flipping(perfect_haplotypes = TRUE, pedigree = Mat_pedigree, method = "power_mean")
 write.csv("/Data/Haplo_Assignment/Route2_SimTrue.csv")
 #2k SNP
-Route2_NoGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_NoGE, method = "power_mean",Data_type = "NoGE_SNP2k")
-Route2_WithGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_2k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
+Route2_NoGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE, method = "power_mean",Data_type = "NoGE_SNP2k")
+Route2_WithGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
 write.csv("/Data/Haplo_Assignment/Route2_NoGE_SNP2k.csv")
 write.csv("/Data/Haplo_Assignment/Route2_WithGE_SNP2k.csv")
 #50k SNP
-Route2_NoGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_NoGE, method = "power_mean", Data_type = "NoGE_SNP50k")
-Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Alpha_pedigree_50k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
+Route2_NoGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE, method = "power_mean", Data_type = "NoGE_SNP50k")
+Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE, method = "power_mean", Data_type = "WithGE_SNP2k")
 write.csv("/Data/Haplo_Assignment/Route2_NoGE_SNP50k.csv")
 write.csv("/Data/Haplo_Assignment/Route2_WithGE_SNP50k.csv")
 
