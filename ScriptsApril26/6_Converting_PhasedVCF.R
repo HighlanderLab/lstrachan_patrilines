@@ -9,6 +9,10 @@
 
 #************ FUNCTIONS *******************
 
+workingDir <- "/home/jana/github/lstrachan_patrilines/"
+pathToBeagle <- "/home/jana/bin/"
+pathToPlink <- "/home/jana/bin/"
+
 get_out_haplotypes <- function(ped_matrix, ind_id_1, ind_id_2) {
   
   # Initialize matrices to hold haplotype data
@@ -48,6 +52,7 @@ get_out_haplotypes <- function(ped_matrix, ind_id_1, ind_id_2) {
   
   return(haplotype_matrices)
 }
+
 convert_genotypes <- function(genotypes) {
   #genotypes[genotypes == '1'] <- 0
   genotypes[genotypes == '0'] <- NA
@@ -94,33 +99,25 @@ convert_VCF <- function(vcf_file = NULL, map_file = NULL){
 }
 
 
-Haplotype_using_pedigree <- function(GenErr = NULL, n = NULL, ped_recon = NULL) {
+Haplotype_using_pedigree <- function(GenErr = NULL, n = NULL, ped_recon = NULL, pedigree_name = NULL, haplo_name = NULL) {
   
   # Validate inputs early
-  if (is.null(GenErr) || is.null(n) || is.null(ped_recon)) {
+ 
+ if (is.null(GenErr) || is.null(n) || is.null(ped_recon)) {
     stop("GenErr, n, and ped_recon must all be provided.")
   }
   
   # Get pedigree
-  if (ped_recon) {
-    pedigree_name <- paste0("Alpha_pedigree_", n, "_", GenErr)
-    if (!exists(pedigree_name)) {
-      stop(paste("Object", pedigree_name, "not found"))
-    }
-    pedigree <- get(pedigree_name)
-  } else {
-    if (!exists("Sim_pedigree_pre")) {
-      stop("Sim_pedigree_pre not found")
-    }
-    pedigree <- Sim_pedigree_pre
-  }
+  pedigree <- read.table(pedigree_name)
+  colnames(pedigree) <- c("id", "dpc", "mother")
+  pedigree = pedigree[pedigree$mother != 0,]
   
   # Get haplotypes
-  haplo_name <- paste0(GenErr, "_SNP", n, "_NoPED_Allchroms")
   if (!exists(haplo_name)) {
     stop(paste("Object", haplo_name, "not found"))
   }
   All_chroms <- get(haplo_name)
+  rownames(All_chroms) <- gsub("1_", "", rownames(All_chroms))
   
   # Subset haplotypes
   Sim_mother_haplo  <- All_chroms[rownames(All_chroms) %in% pedigree$mother, , drop = FALSE]
@@ -148,28 +145,38 @@ Haplotype_using_pedigree <- function(GenErr = NULL, n = NULL, ped_recon = NULL) 
   return(tmp2)
 }
 
-
+order_by_prefix <- function(df) {
+  # Extract the part before the underscore
+  prefix <- as.numeric(sapply(rownames(df), function(x) strsplit(x, "_")[[1]][1]))
+  
+  # Order the data frame based on the extracted prefix
+  df_ordered <- df[order(prefix, rownames(df)), , drop = FALSE]
+  
+  return(df_ordered)
+}
 
 #************* SIMULATED DATA ****************************
 #Pedigree prior to reconstruction 
-Sim_pedigree_pre <- read.csv("Data/worker_pedigree.csv")
+setwd(workingDir)
+
 
 #Pedigree post reconstruction (with AlphaAssign)
-Alpha_pedigree_2k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt")
-Alpha_pedigree_50k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt")
+#Alpha_pedigree_4_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt")
+#Alpha_pedigree_5_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt") 
 
-Alpha_pedigree_2k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt")
-Alpha_pedigree_50k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt")
+#Alpha_pedigree_4_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt")
+#Alpha_pedigree_5_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt")
 
 setwd("Outputs/Beagle_phasing")
 
 # Combine results across all chromosomes for each dataset
-for (pedPhase in c("noPedigree", "pedigree")) {
+for (pedPhase in c("recPedigree", "matPedigree")) {
   for (GEType in c("NoGE", "WithGE")) {
     for (n in c(4, 5)) {
       print(paste("Processing", GEType, "SNP", n, pedPhase))
       results_list <- list()
-      for (chr in 1:16) {
+      for (chr in 1:1) { #16
+        print(chr)
         vcf_gz <- paste0("SNP_", n, "_", GEType, "_PHASED_", pedPhase, "_chr", chr, ".vcf.gz")
         map <- paste0("SNP_", n, "_", GEType, "_PHASED_", pedPhase, "_chr", chr, ".map")
         df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
@@ -182,18 +189,25 @@ for (pedPhase in c("noPedigree", "pedigree")) {
 }
 
 
+#Reconstructed pedigree
+#2 = 2K, 5 = 50K
+#Get the haplotypes of the phasing with maternal pedigree
+setwd(workingDir)
+NoGE_SNP2k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "4", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "NoGE_SNP4_matPedigree_AllChrs")
+WithGE_SNP2k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "4", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "WithGE_SNP4_matPedigree_AllChrs")
+NoGE_SNP50k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "5", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "NoGE_SNP5_matPedigree_AllChrs")
+WithGE_SNP50k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "5", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "WithGE_SNP5_matPedigree_AllChrs")
 
-#Get the haplotypes of the pedigree made by the pedigree reconstruction
-NoGE_SNP2k_PhasedHaplotypes_WithPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "2k", ped_recon = TRUE)
-WithGE_SNP2k_PhasedHaplotypes_WithPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "2k", ped_recon = TRUE)
-NoGE_SNP50k_PhasedHaplotypes_WithPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "50k", ped_recon = TRUE)
-WithGE_SNP50k_PhasedHaplotypes_WithPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "50k", ped_recon = TRUE)
+#Get the haplotypes phased with reconstructed pedugree
+NoGE_SNP2k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "4", ped_recon = TRUE, pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt", haplo_name = "NoGE_SNP4_recPedigree_AllChrs")
+WithGE_SNP2k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "4", ped_recon = TRUE, pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt", haplo_name = "WithGE_SNP4_recPedigree_AllChrs")
+NoGE_SNP50k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "5", ped_recon = TRUE, pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt", haplo_name = "NoGE_SNP5_recPedigree_AllChrs")
+WithGE_SNP50k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "5", ped_recon = TRUE, pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt", haplo_name = "WithGE_SNP5_recPedigree_AllChrs")
 
-#Get the haplotypes of the pedigree prior to pedigree reconstruction
-NoGE_SNP2k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "2k", ped_recon = FALSE)
-WithGE_SNP2k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "2k", ped_recon = FALSE)
-NoGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "50k", ped_recon = FALSE)
-WithGE_SNP50k_PhasedHaplotypes_NoPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "50k", ped_recon = FALSE)
+
+save(list = c("NoGE_SNP2k_PhasedHaplotypes_matPed", "WithGE_SNP2k_PhasedHaplotypes_matPed", "NoGE_SNP50k_PhasedHaplotypes_matPed", "WithGE_SNP50k_PhasedHaplotypes_matPed", 
+              "NoGE_SNP2k_PhasedHaplotypes_recPed", "WithGE_SNP2k_PhasedHaplotypes_recPed", "NoGE_SNP50k_PhasedHaplotypes_recPed", "WithGE_SNP50k_PhasedHaplotypes_recPed"),
+            file = "Outputs/Beagle_phasing/All_Phased_Haplotypes.RData")
 
 ######################################################################################3
 #********* REAL DATA ******************

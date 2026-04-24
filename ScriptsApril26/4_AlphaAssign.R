@@ -6,6 +6,7 @@
 #******************************************************************************
 
 ##############.  Prepping the input files ##################
+rm(list = ls()) #Lets clear workspace just incase something sneaks in
 pathToPlink <- "/home/jana/bin/"
 workingDir = "/home/jana/github/lstrachan_patrilines/"
 
@@ -17,6 +18,13 @@ pedigree_file <- read.csv("Data/worker_pedigree.csv")
 Alpha_pedigree_sim <- data.frame(id = pedigree_file$id,
                              sire = rep(0, length(pedigree_file$id)),
                              dam = pedigree_file$mother)
+f = data.frame(id = unique(Alpha_pedigree_sim$sire), sire = 0, dam = 0)
+m = data.frame(id = unique(Alpha_pedigree_sim$dam), sire = 0, dam = 0)
+Alpha_pedigree_sim_full <- rbind(f, m, Alpha_pedigree_sim)
+write.table(Alpha_pedigree_sim_full, file = "Data/SimData_Pedigree_Full.txt", quote = F, row.names = F, col.names = F)
+Alpha_pedigree_sim_full_maternal <- Alpha_pedigree_sim_full
+Alpha_pedigree_sim_full_maternal$sire <- 0
+write.table(Alpha_pedigree_sim_full, file = "Data/SimData_Pedigree_Full_Maternal.txt", quote = F, row.names = F, col.names = F, )
 
 dir.create("Data/AlphaAssign", showWarnings = FALSE)
 write.table(Alpha_pedigree_sim, file = "Data/AlphaAssign/SimData_Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
@@ -49,8 +57,8 @@ write.table(True_pedigree, file = "Data/AlphaAssign/SimData_TruePedigree.csv", s
 setwd("Data/Sim_WithGE")
 for (n in 1:5){ 
   print(n)
-  system(paste0(pathToPlink, "plink --file SNP_",n,"_WithGE_QC --recode A --out SNP_",n,"_WithGE_QC_RecodeA"))
-  
+  ped_to_raw(ped_file = paste0("SNP_",n,"_WithGE_QC.ped"), map_file = paste0("SNP_",n,"_WithGE_QC.map"), output_file = paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"))
+
   AlphaPed <- read.table(paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"), header=TRUE)
   AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
   AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
@@ -62,7 +70,7 @@ setwd(workingDir)
 #No genotyping errors:   
 setwd("Data/Sim_NoGE")
 for (n in 1:5){ 
-  system(paste0(pathToPlink, "plink --file SNP_",n,"_NoGE_QC --recode A --out SNP_",n,"_NoGE_QC_RecodeA"))
+  ped_to_raw(ped_file = paste0("SNP_",n,"_NoGE_QC.ped"), map_file = paste0("SNP_",n,"_NoGE_QC.map"), output_file = paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"))
   
   AlphaPed <- read.table(paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"), header=TRUE)
   AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
@@ -162,7 +170,7 @@ WithGE_Alpha_output <- Process_AlphaAssign_output(GE = TRUE, True_pedigree = Tru
 #Original pedigree = Alpha_pedigree
 # NoGE updated pedigree ----------------------------------------------------
 #Using the 1.7k SNP and the 50k SNP
-NoGE_2k_pedigree <- read.table("AlphaGeno_SNP4_NoGE.sires")
+NoGE_2k_pedigree <- read.table("AlphaGeno_SNP4_NoGE.sires", header=T)
 NoGE_2k_pedigree <- NoGE_2k_pedigree[NoGE_2k_pedigree$chosen == 1, ]
 NoGE_2k_pedigree <- NoGE_2k_pedigree[, c(1,2)]
 colnames(NoGE_2k_pedigree) <- c("id", "sire")
@@ -176,7 +184,7 @@ Alpha_pedigree_sim_2K$sire[update_sires] <- NoGE_2k_pedigree$sire[idx[update_sir
 write.table(Alpha_pedigree_sim_2K, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 
-NoGE_50k_pedigree <- read.table("AlphaGeno_SNP5_NoGE.sires")
+NoGE_50k_pedigree <- read.table("AlphaGeno_SNP5_NoGE.sires", header=T)
 NoGE_50k_pedigree <- NoGE_50k_pedigree[NoGE_50k_pedigree$chosen == 1, ]
 NoGE_50k_pedigree <- NoGE_50k_pedigree[, c(1,2)]
 colnames(NoGE_50k_pedigree) <- c("id", "sire")
@@ -192,7 +200,7 @@ write.table(Alpha_pedigree_sim_50K, file = paste0(workingDir, "Outputs/AlphaAssi
 
 # WithGE updated pedigree ----------------------------------------------------
 #Using the 1.7k SNP and the 50k SNP
-WithGE_2k_pedigree <- read.table("AlphaGeno_SNP4_WithGE.sires")
+WithGE_2k_pedigree <- read.table("AlphaGeno_SNP4_WithGE.sires", header=T)
 WithGE_2k_pedigree <- WithGE_2k_pedigree[WithGE_2k_pedigree$chosen == 1, ]
 WithGE_2k_pedigree <- WithGE_2k_pedigree[, c(1,2)]
 colnames(WithGE_2k_pedigree) <- c("id", "sire")
@@ -206,7 +214,7 @@ Alpha_pedigree_sim_2K_withGE$sire[update_sires] <- WithGE_2k_pedigree$sire[idx[u
 write.table(Alpha_pedigree_sim_2K_withGE, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 
-WithGE_50k_pedigree <- read.table("AlphaGeno_SNP5_WithGE.sires")
+WithGE_50k_pedigree <- read.table("AlphaGeno_SNP5_WithGE.sires", header=T)
 WithGE_50k_pedigree <- WithGE_50k_pedigree[WithGE_50k_pedigree$chosen == 1, ]
 WithGE_50k_pedigree <- WithGE_50k_pedigree[, c(1,2)]
 colnames(WithGE_50k_pedigree) <- c("id", "sire")
@@ -233,7 +241,7 @@ pathToPlink <- "/home/jana/bin/"
 workingDir <- "/home/jana/github/lstrachan_patrilines/"
 
 setwd(workingDir)
-dir.create("Data/Real_data/AlphaAssign")
+dir.create("Data/Real_data/AlphaAssign", showWarnings = FALSE)
 
 pedigree_file_real <- read.csv("Data/Real_data/Real_Data_pedigree.csv")
 colnames(pedigree_file_real) <- c("id", "sire", "dam")
@@ -256,6 +264,7 @@ SNP_samples <- SNP_samples[SNP_samples$biotype == "dpc", ]
 SNP_samples <- SNP_samples$snp_id
 
 n <- nrow(pedigree_file_real)
+
 Potential_fathers <- data.frame(
   id = pedigree_file_real$id,
   Dpc1 = rep(SNP_samples[1], n),
@@ -268,26 +277,19 @@ write.table(Potential_fathers, file = "Data/Real_data/AlphaAssign/PotentialFathe
 
 
 #Recode quality controlled files for AlphaAssign
-#Lets move the vcf file we need for AlphaAssign into the folder to not get mixed up with filenames
-file.copy(
-  from = "Data/Real_data/Slov_fM_AC_QC_filtered.vcf.gz",
-  to   = "Data/Real_data/AlphaAssign/Slov_fM_AC_QC_filtered.vcf.gz"
-)
-setwd("Data/Real_data/AlphaAssign")
-system(paste0(pathToPlink, "plink --vcf Slov_fM_AC_QC_filtered.vcf.gz --recode A --out Slov_Alpha_RecodeA"))
+ped_to_raw(ped_file = "Data/Real_data/Slov_fM_QC.ped", map_file = "Data/Real_data/Slov_fM_QC.map", output_file = "Data/Real_data/Slov_fM_QC.raw")
 
 #Process the genotypes
-AlphaPed <- read.table(paste0("Slov_Alpha_RecodeA.raw"), header=TRUE)
+AlphaPed <- read.table("Data/Real_data/Slov_fM_QC.raw", header=TRUE)
 AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
 AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
 
-write.table(AlphaGeno_id, file=paste0("AlphaGeno_RealData.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+write.table(AlphaGeno_id, file=paste0("Data/Real_data/AlphaGeno_RealData.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
 
 ############### Running AlphAssign in terminal################
 setwd(workingDir)
 #create a for loop here for all of the SNP array sizes <-------------- 
 system(paste0("bash ScriptsApril26/RunAlphaAssign_RealData.sh AlphaGeno_RealData ", workingDir, "/Data/Real_data/AlphaAssign ", workingDir, "/Outputs/AlphaAssign"))
-
 
 #Summarise the dataset     
 Alpha_output <- read.table("Outputs/AlphaAssign/AlphaGeno_RealData.sires", header = TRUE)
@@ -316,7 +318,7 @@ Real_Alpha_df <- data.frame(
 
 
 AlphaAssign_Summary <- rbind(NoGE_Alpha_output, WithGE_Alpha_output, Real_Alpha_df)
-write.table(AlphaAssign_Summary, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_summary.txt", sep = " ", quote = F, col.names = T, row.names = F))
+write.table(AlphaAssign_Summary, file = paste0(workingDir, "Outputs/AlphaAssign/Alpha_summary.txt"), sep = " ", quote = F, col.names = T, row.names = F)
 
 ##################################################
 # Update the pedigree
