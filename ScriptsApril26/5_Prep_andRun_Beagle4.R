@@ -100,7 +100,7 @@ system("tabix -p vcf Data/Real_data/Slov_fM_QC_ACformat_sorted_biallelic_noDupPo
 
 
 #PHASING With Mat PEDIGREE
-for (i in 1:1) {
+for (i in 1:16) {
 
   system("awk -F, 'NR>2 {print $1,$1,$2,$3}' Data/Real_data/Real_Data_pedigree.csv > Data/Real_data/Real_Data_pedigree_Beagle.csv")
   
@@ -116,7 +116,7 @@ for (i in 1:1) {
 #PHASING WITH full reconstructed PEDIGREE
 system("awk '{print $1,$1,$2,$3}' Outputs/AlphaAssign/Alpha_pedigree_Real.txt > Outputs/AlphaAssign/Alpha_pedigree_Real_Beagle.txt")
 
-for (i in 1:1) {
+for (i in 1:16) {
   beagle_cmd <- paste0(
     "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Real_data/Slov_fM_QC_ACformat_sorted_biallelic_noDupPos.vcf.gz ped=Outputs/AlphaAssign/Alpha_pedigree_Real_Beagle.txt out=Outputs/Beagle_phasing/Slov_PHASED_recPedigree_chr", 
     i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
@@ -161,7 +161,7 @@ setwd(workingDir)
 
 #PHASING With maternal true PEDIGREE
 for (n in nSNP_array){
-  for (i in 1:1) {
+  for (i in 1:16) {
 
     system("awk  '{print \"1_\"$1,\"1_\"$1,\"1_\"$2,\"1_\"$3}' Data/SimData_Pedigree_Full_Maternal.csv > Data/SimData_Pedigree_Full_Maternal_Beagle.txt")
     system(paste0("sed -i 's/1_0/0/g' Data/SimData_Pedigree_Full_Maternal_Beagle.csv"))
@@ -185,7 +185,7 @@ for (n in nSNP_array){
 
 #PHASING WITH PEDIGREE
 for (n in nSNP_array){
-  for (i in 1:1) {
+  for (i in 1:16) {
     snp_size = c("4" = "2k", "5" = "50k")
 
     system(paste0("awk   '{print \"1_\"$1,\"1_\"$1,\"1_\"$2,\"1_\"$3}' Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_NoGE.txt > Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_NoGE_Beagle.txt"))

@@ -21,10 +21,7 @@ Alpha_pedigree_sim <- data.frame(id = pedigree_file$id,
 f = data.frame(id = unique(Alpha_pedigree_sim$sire), sire = 0, dam = 0)
 m = data.frame(id = unique(Alpha_pedigree_sim$dam), sire = 0, dam = 0)
 Alpha_pedigree_sim_full <- rbind(f, m, Alpha_pedigree_sim)
-write.table(Alpha_pedigree_sim_full, file = "Data/SimData_Pedigree_Full.txt", quote = F, row.names = F, col.names = F)
-Alpha_pedigree_sim_full_maternal <- Alpha_pedigree_sim_full
-Alpha_pedigree_sim_full_maternal$sire <- 0
-write.table(Alpha_pedigree_sim_full, file = "Data/SimData_Pedigree_Full_Maternal.txt", quote = F, row.names = F, col.names = F, )
+write.table(Alpha_pedigree_sim_full, file = "Data/SimData_Pedigree_Full_Maternal.txt", quote = F, row.names = F, col.names = F)
 
 dir.create("Data/AlphaAssign", showWarnings = FALSE)
 write.table(Alpha_pedigree_sim, file = "Data/AlphaAssign/SimData_Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
