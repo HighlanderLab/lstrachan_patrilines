@@ -258,9 +258,6 @@ NoGE_SNP50k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "NoGE",
 WithGE_SNP50k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "5", ped_recon = TRUE, pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt", haplo_name = "WithGE_SNP5_recPedigree_AllChrs")
 
 
-save(list = c("NoGE_SNP2k_PhasedHaplotypes_matPed", "WithGE_SNP2k_PhasedHaplotypes_matPed", "NoGE_SNP50k_PhasedHaplotypes_matPed", "WithGE_SNP50k_PhasedHaplotypes_matPed", 
-              "NoGE_SNP2k_PhasedHaplotypes_recPed", "WithGE_SNP2k_PhasedHaplotypes_recPed", "NoGE_SNP50k_PhasedHaplotypes_recPed", "WithGE_SNP50k_PhasedHaplotypes_recPed"),
-            file = "Outputs/Beagle_phasing/All_Phased_Haplotypes.RData")
 
 ######################################################################################3
 #********* REAL DATA ******************
@@ -292,3 +289,11 @@ Slov_prephased_haplotypes <- convert_VCF(vcf_file = vcf_file, map_file = map_fil
 
 Slov_PhasedHaplotypes_matPed <- Haplotype_using_pedigree_realData(pedigree_name = "Data/Real_data/Real_Data_pedigree.txt", haplo_name = "Slov_PhasedHaplotypes_matPedigree_AllChrs") #Slov_PhasedHaplotypes_NOPed
 Slov_PhasedHaplotypes_recPed <- Haplotype_using_pedigree_realData(pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_Real.txt", haplo_name = "Slov_PhasedHaplotypes_recPedigree_AllChrs") #Slov_PhasedHaplotypes_WithPed
+
+
+save(list = c("Slov_PhasedHaplotypes_matPed", "Slov_PhasedHaplotypes_recPed",
+              "NoGE_SNP2k_PhasedHaplotypes_matPed", "WithGE_SNP2k_PhasedHaplotypes_matPed", "NoGE_SNP50k_PhasedHaplotypes_matPed", "WithGE_SNP50k_PhasedHaplotypes_matPed", 
+              "NoGE_SNP2k_PhasedHaplotypes_recPed", "WithGE_SNP2k_PhasedHaplotypes_recPed", "NoGE_SNP50k_PhasedHaplotypes_recPed", "WithGE_SNP50k_PhasedHaplotypes_recPed"),
+            file = "Outputs/Beagle_phasing/All_Phased_Haplotypes.RData")
+
+save.image(file = paste0(workingDir, "/Data/Pipeline/6_Converting_PhasedVCF.Rdata"))

@@ -245,3 +245,5 @@ system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --remove workers_to_remove.
 
 
 
+
+save.image(file = paste0(workingDir, "/Data/Pipeline/1_RealData_prepared.Rdata"))

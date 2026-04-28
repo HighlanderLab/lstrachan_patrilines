@@ -340,7 +340,7 @@ for (gen in 1:10) {
   }
 }
 
-save.image(file = "Data/2000NE_HBGenome_CsdOn_10gen_PlusArrays.RData")
+save.image(file = paste0(workingDir, "Data/Pipeline/2_FounderPop_inbred.RData"))
 
 ##################################################################################
 # PLOT
