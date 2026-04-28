@@ -306,3 +306,5 @@ for (n in 1:nrow(nSNP_array)){
   system(paste0(pathToPlink,"/plink --bfile Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_QC --recode --out Data/Sim_WithGE/SNP_", nSNP_array[n,2], "_WithGE_QC"))   #get the ped and map files back
 }
   
+
+save.image(file = paste0(workingDir, "/Data/Pipeline/3_SimulatedData_prepared.Rdata"))

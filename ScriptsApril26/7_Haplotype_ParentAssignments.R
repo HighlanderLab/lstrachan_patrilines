@@ -1268,14 +1268,14 @@ Rec_pedigree_50k_WithGE_filtered <- Rec_pedigree_50k_WithGE[Rec_pedigree_50k_Wit
 #2k SNP
 Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP2k")
 Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP2k")
-save(Route1_NoGE_SNP2k, file ="/Data/Haplo_Assignment/Route1_NoGE_SNP2k.Rdata")
-save(Route1_WithGE_SNP2k, file = "/Data/Haplo_Assignment/Route1_WithGE_SNP2k.Rdata")
+save(Route1_NoGE_SNP2k, file =paste0(workingDir, "/Data/Haplo_Assignment/Route1_NoGE_SNP2k.Rdata"))
+save(Route1_WithGE_SNP2k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route1_WithGE_SNP2k.Rdata"))
 
 #50k SNP
 Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP50k")
 Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP50k")
-save(Route1_NoGE_SNP50k, file = "/Data/Haplo_Assignment/Route1_NoGE_SNP50k.Rdata")
-save(Route1_WithGE_SNP50k, file = "/Data/Haplo_Assignment/Route1_WithGE_SNP50k.Rdata")
+save(Route1_NoGE_SNP50k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route1_NoGE_SNP50k.Rdata"))
+save(Route1_WithGE_SNP50k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route1_WithGE_SNP50k.Rdata"))
 
 #Real data
 Slov_pedigree_post_filter <- Slov_pedigree_post[Slov_pedigree_post$sire != 0 & Slov_pedigree_post$dam != 0,]
@@ -1296,17 +1296,17 @@ save("/Data/Haplo_Assignment/Route1_Real.Rdata")
 
 #True haplotypes (should work perfectly)
 Route2_SimTrue <- Route2_flipping(perfect_haplotypes = TRUE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "True")
-save(Route2_SimTrue, file ="/Data/Haplo_Assignment/Route2_SimTrue.csv")
+save(Route2_SimTrue, file =paste0(workingDir, "/Data/Haplo_Assignment/Route2_SimTrue.csv"))
 #2k SNP
 Route2_NoGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean",Data_type = "NoGE_SNP2k")
 Route2_WithGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP2k")
-save(Route2_NoGE_SNP2k, file ="/Data/Haplo_Assignment/Route2_NoGE_SNP2k.csv")
-save(Route2_WithGE_SNP2k, file = "/Data/Haplo_Assignment/Route2_WithGE_SNP2k.csv")
+save(Route2_NoGE_SNP2k, file =paste0(workingDir, "/Data/Haplo_Assignment/Route2_NoGE_SNP2k.csv"))
+save(Route2_WithGE_SNP2k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route2_WithGE_SNP2k.csv"))
 #50k SNP
 Route2_NoGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "NoGE_SNP50k")
-Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP2k")
-save(Route2_NoGE_SNP50k, file ="/Data/Haplo_Assignment/Route2_NoGE_SNP50k.csv")
-save(Route2_WithGE_SNP50k,  file = "/Data/Haplo_Assignment/Route2_WithGE_SNP50k.csv")
+Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP50k")
+save(Route2_NoGE_SNP50k, file =paste0(workingDir, "/Data/Haplo_Assignment/Route2_NoGE_SNP50k.csv"))
+save(Route2_WithGE_SNP50k,  file = paste0(workingDir, "/Data/Haplo_Assignment/Route2_WithGE_SNP50k.csv"))
 
 #Real data
 Slov_pedigree_pre_filtered <- Slov_pedigree_pre[Slov_pedigree_pre$dam != 0,] # Remove rows with unknown mothers 
@@ -1315,12 +1315,3 @@ tmp <- unique(tmp)
 Slov_pedigree_pre_filtered <- Slov_pedigree_pre_filtered[Slov_pedigree_pre_filtered$id %in% tmp,]
 Route2_Real <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_pre_filtered, method = "power_mean", Data_type = "Real_Slov_data")
 save("/Data/Haplo_Assignment/Route2_Real.csv")
-
-
-
-
-
-
-
-
-

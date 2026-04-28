@@ -48,52 +48,52 @@ Dpc_known <- data.frame(id = unique(pedigree_file$dpc),
                         sire = rep(NA, length(unique(pedigree_file$dpc))))
 
 True_pedigree <- rbind(Mothers_known, Dpc_known, Worker_known)
-write.table(True_pedigree, file = "Data/AlphaAssign/SimData_TruePedigree.csv", sep = ",", quote = F, col.names = T, row.names = F)
+# write.table(True_pedigree, file = "Data/AlphaAssign/SimData_TruePedigree.csv", sep = ",", quote = F, col.names = T, row.names = F)
 
-#With genotyping errors: 
-setwd("Data/Sim_WithGE")
-for (n in 1:5){ 
-  print(n)
-  ped_to_raw(ped_file = paste0("SNP_",n,"_WithGE_QC.ped"), map_file = paste0("SNP_",n,"_WithGE_QC.map"), output_file = paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"))
+# #With genotyping errors: 
+# setwd("Data/Sim_WithGE")
+# for (n in 1:5){ 
+#   print(n)
+#   ped_to_raw(ped_file = paste0("SNP_",n,"_WithGE_QC.ped"), map_file = paste0("SNP_",n,"_WithGE_QC.map"), output_file = paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"))
 
-  AlphaPed <- read.table(paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"), header=TRUE)
-  AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
-  AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
+#   AlphaPed <- read.table(paste0("SNP_",n,"_WithGE_QC_RecodeA.raw"), header=TRUE)
+#   AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
+#   AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
   
-  write.table(AlphaGeno_id, file=paste0(workingDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_WithGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
-}
-setwd(workingDir)
+#   write.table(AlphaGeno_id, file=paste0(workingDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_WithGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+# }
+# setwd(workingDir)
   
-#No genotyping errors:   
-setwd("Data/Sim_NoGE")
-for (n in 1:5){ 
-  ped_to_raw(ped_file = paste0("SNP_",n,"_NoGE_QC.ped"), map_file = paste0("SNP_",n,"_NoGE_QC.map"), output_file = paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"))
+# #No genotyping errors:   
+# setwd("Data/Sim_NoGE")
+# for (n in 1:5){ 
+#   ped_to_raw(ped_file = paste0("SNP_",n,"_NoGE_QC.ped"), map_file = paste0("SNP_",n,"_NoGE_QC.map"), output_file = paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"))
   
-  AlphaPed <- read.table(paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"), header=TRUE)
-  AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
-  AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
+#   AlphaPed <- read.table(paste0("SNP_",n,"_NoGE_QC_RecodeA.raw"), header=TRUE)
+#   AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
+#   AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
   
-  write.table(AlphaGeno_id, file=paste0(workingDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_NoGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
-}
-setwd(workingDir)
+#   write.table(AlphaGeno_id, file=paste0(workingDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_NoGE.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+# }
+# setwd(workingDir)
 
 
-############### Running AlphAssign in terminal################
-  #create a for loop here for all of the SNP array sizes <-------------- 
-dir.create("Outputs/", showWarnings = FALSE)
-dir.create("Outputs/AlphaAssign", showWarnings = FALSE)
+# ############### Running AlphAssign in terminal################
+#   #create a for loop here for all of the SNP array sizes <-------------- 
+# dir.create("Outputs/", showWarnings = FALSE)
+# dir.create("Outputs/AlphaAssign", showWarnings = FALSE)
 
-#With genotyping errors:
-for (n in 1:5){
-  print(n)
-  system(paste0("bash ScriptsApril26/RunAlphaAssign_SimData.sh AlphaGeno_SNP", n, "_WithGE ", workingDir, "Data/AlphaAssign/ ", workingDir, "Outputs/AlphaAssign/"))
-}
+# #With genotyping errors:
+# for (n in 1:5){
+#   print(n)
+#   system(paste0("bash ScriptsApril26/RunAlphaAssign_SimData.sh AlphaGeno_SNP", n, "_WithGE ", workingDir, "Data/AlphaAssign/ ", workingDir, "Outputs/AlphaAssign/"))
+# }
 
-#No genotyping errors:
-for (n in 1:5){
-  print(n)
-  system(paste0("bash ScriptsApril26/RunAlphaAssign_SimData.sh AlphaGeno_SNP", n, "_NoGE ", workingDir, "Data/AlphaAssign/ ", workingDir, "Outputs/AlphaAssign/"))
-}
+# #No genotyping errors:
+# for (n in 1:5){
+#   print(n)
+#   system(paste0("bash ScriptsApril26/RunAlphaAssign_SimData.sh AlphaGeno_SNP", n, "_NoGE ", workingDir, "Data/AlphaAssign/ ", workingDir, "Outputs/AlphaAssign/"))
+# }
 
 
 ############### Processing AlphaAssign output #################
@@ -326,3 +326,4 @@ update_sires <- Alpha_pedigree_real$sire == 0 & !is.na(idx)
 Alpha_pedigree_real$sire[update_sires] <- Offspring_and_candidateParent$sire[idx[update_sires]]
 write.table(Alpha_pedigree_real, file = "Outputs/AlphaAssign/Alpha_pedigree_Real.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
+save.image(file = paste0(workingDir, "/Data/Pipeline/4_AlphaAssign.Rdata"))
