@@ -217,43 +217,6 @@ assign_parent_haplo <- function(df, maternal = NULL, paternal = NULL, offspring_
   return(df)
 }
 
-get_phased_haplotypes <- function(Geno_Error = NULL){
-  # Set the working directory and read the pedigree file
-  setwd("~/Desktop/Slovenia data/Attempt2/Nested/General Data")
-  pedigree <- read_csv("worker_pedigree.csv")
-  
-  if (Geno_Error == "GE"){
-    # Set the working directory and read the phased data
-    #Geno Error 
-    setwd("~/Desktop/Slovenia data/Attempt2/Nested/SNP4/Geno Err/phased")
-    Nested_ped_phased <- read.table("phased_SNP4_ped_withGenoError_ACformat_QC.ped", header = FALSE)
-    map <- read.table("phased_SNP4_ped_withGenoError_ACformat_QC.map", header = FALSE)
-    
-  } else if (Geno_Error == "nGE") {
-    #No GenoError 
-    setwd("~/Desktop/Slovenia data/Attempt2/Nested/SNP4/No_GE/phased")
-    Nested_ped_phased <- read.table("SNP4Nested_nGE_phasingTest.ped", header = FALSE)
-    map <- read.table("SNP4Nested_nGE_phasingTest.map", header = FALSE)
-  } else{
-    stop("No Geno_Error provided, must be GE or nGE")
-  }
-  
-  
-  # Extract genotype columns and convert them to 0/1 format
-  genotypes_columns_phased <- Nested_ped_phased[, 7:ncol(Nested_ped_phased)]
-  genotypes_01_phased <- apply(genotypes_columns_phased, 2, convert_genotypes)
-  
-  # Generate IDs for the pedigree
-  IDs_forPed <- name_genotypes(map_file = map)
-  rownames(genotypes_01_phased) <- Nested_ped_phased$V2
-  colnames(genotypes_01_phased) <- IDs_forPed
-  
-  # Transform genotypes
-  phased_haplotypes <- transform_genotype(genotypes_01_phased)
-  
-  return(phased_haplotypes)
-}
-
 order_by_prefix <- function(df) {
   # Extract the part before the underscore
   prefix <- as.numeric(sapply(rownames(df), function(x) strsplit(x, "_")[[1]][1]))
@@ -1176,7 +1139,7 @@ check_haplotype_postFlip <- function(complete_haplotypes = NULL, results = NULL,
 #####################################################################################
 #**** Get the true simulated haplotypes and phased haplotypes ******
 #####################################################################################
-
+print("Reading in simulated data")
 load(paste0(workingDir,"/Data/SP_object.Rdata"))
 Simulated_SP <- SP
 Simulated_pop <- load(paste0(workingDir,"/Data/Pop_withFathers.Rdata"))
@@ -1213,6 +1176,7 @@ WithGE_map_50k <- read.table("Data/Sim_WithGE/SNP_5_WithGE_QC_ACformat.map")
 #####################################################################################
 #**** Get the real data phased haplotypes ******
 #####################################################################################
+print("Reading in real data")
 # Pedigree prior to ped reconstruction
 Slov_pedigree_pre <- read.table("Data/Real_data/Real_Data_pedigree.txt")
 colnames(Slov_pedigree_pre) <- cols
@@ -1225,12 +1189,12 @@ colnames(Slov_pedigree_post) <- cols
 Slov_PhasedHaplotypes_matPed <- "Load here"
 Slov_PhasedHaplotypes_recPed <- "Load here"
 
-Slov_map <- read.table("Data/Real_data/Slov_fM_AC_QC.map")
+Slov_map <- read.table("Data/Real_data/Slov_fM_QC_ACformat.map")
 
 #####################################################################################
 #*** Check the different phasing versions compared to the real and prephased data just to check similarity ***
 #####################################################################################
-
+print("Checking accuracy of phasing for simulated data")
 # ••• Simulated •••
 
 true_vs_NoGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
@@ -1252,11 +1216,11 @@ true_vs_WithGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplo
 
 #**Route 1: use pedigree reconstruction's pedigree and use both dam and sire pedigree ID to assign haplotype parental origins **
 #####################################################################################
-
+print("Assigning haplotype PO for simulated data")
+print("Route1")
 #True haplotypes (should work perfectly)
 Route1_SimTrue <- Route1_flipping(perfect_haplotypes = TRUE, pedigree = Worker_pedigree, method = "power_mean")
-dir.create("Data/Haplo_Assignment")
-save(Route1_SimTrue, file = "Data/Haplo_Assignment/Route1_SimTrue.Rdata")
+
 
 #Editing route 1 pedigrees - can't have sire's present 
 Rec_pedigree_2k_NoGE_filtered <- Rec_pedigree_2k_NoGE[Rec_pedigree_2k_NoGE$sire != 0,]
@@ -1268,19 +1232,12 @@ Rec_pedigree_50k_WithGE_filtered <- Rec_pedigree_50k_WithGE[Rec_pedigree_50k_Wit
 #2k SNP
 Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP2k")
 Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP2k")
-save(Route1_NoGE_SNP2k, file =paste0(workingDir, "/Data/Haplo_Assignment/Route1_NoGE_SNP2k.Rdata"))
-save(Route1_WithGE_SNP2k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route1_WithGE_SNP2k.Rdata"))
+
 
 #50k SNP
 Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP50k")
 Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP50k")
-save(Route1_NoGE_SNP50k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route1_NoGE_SNP50k.Rdata"))
-save(Route1_WithGE_SNP50k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route1_WithGE_SNP50k.Rdata"))
 
-#Real data
-Slov_pedigree_post_filter <- Slov_pedigree_post[Slov_pedigree_post$sire != 0 & Slov_pedigree_post$dam != 0,]
-Route1_Real <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_post_filter, method = "power_mean", Data_type = "Real_Slov_data")
-save("/Data/Haplo_Assignment/Route1_Real.Rdata")
 
 
 # #Checking haplotypes post flip to see if something has happened
@@ -1293,25 +1250,30 @@ save("/Data/Haplo_Assignment/Route1_Real.Rdata")
 #####################################################################################
 #** Route 2: DO NOT use pedigree reconstruction and use ONLY dam pedigree ID to assign haplotype parental origins **
 #####################################################################################
+print("Route2")
 
 #True haplotypes (should work perfectly)
 Route2_SimTrue <- Route2_flipping(perfect_haplotypes = TRUE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "True")
-save(Route2_SimTrue, file =paste0(workingDir, "/Data/Haplo_Assignment/Route2_SimTrue.csv"))
+
 #2k SNP
 Route2_NoGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean",Data_type = "NoGE_SNP2k")
 Route2_WithGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP2k")
-save(Route2_NoGE_SNP2k, file =paste0(workingDir, "/Data/Haplo_Assignment/Route2_NoGE_SNP2k.csv"))
-save(Route2_WithGE_SNP2k, file = paste0(workingDir, "/Data/Haplo_Assignment/Route2_WithGE_SNP2k.csv"))
+
 #50k SNP
 Route2_NoGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "NoGE_SNP50k")
 Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP50k")
-save(Route2_NoGE_SNP50k, file =paste0(workingDir, "/Data/Haplo_Assignment/Route2_NoGE_SNP50k.csv"))
-save(Route2_WithGE_SNP50k,  file = paste0(workingDir, "/Data/Haplo_Assignment/Route2_WithGE_SNP50k.csv"))
 
+
+print("Assigning haplotype PO for real data")
 #Real data
-Slov_pedigree_pre_filtered <- Slov_pedigree_pre[Slov_pedigree_pre$dam != 0,] # Remove rows with unknown mothers 
+Slov_pedigree_mat_filtered <- Slov_pedigree_mat[Slov_pedigree_mat$dam != 0,] # Remove rows with unknown mothers 
 tmp <-sub("_.*", "", rownames(Slov_PhasedHaplotypes_matPed))
 tmp <- unique(tmp)
-Slov_pedigree_pre_filtered <- Slov_pedigree_pre_filtered[Slov_pedigree_pre_filtered$id %in% tmp,]
-Route2_Real <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_pre_filtered, method = "power_mean", Data_type = "Real_Slov_data")
-save("/Data/Haplo_Assignment/Route2_Real.csv")
+Slov_pedigree_mat_filtered <- Slov_pedigree_mat_filtered[Slov_pedigree_mat_filtered$id %in% tmp,]
+
+#Real data
+Slov_pedigree_rec_filter <- Slov_pedigree_rec[Slov_pedigree_rec$sire != 0 & Slov_pedigree_rec$dam != 0,]
+Route1_Real <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_rec_filter, method = "power_mean", Data_type = "Real_Slov_data")
+Route2_Real <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_mat_filtered, method = "power_mean", Data_type = "Real_Slov_data")
+
+save.image(paste0(workingDir, "Data/Pipeline/7_Haplotype_ParentAssignments.RData"))
