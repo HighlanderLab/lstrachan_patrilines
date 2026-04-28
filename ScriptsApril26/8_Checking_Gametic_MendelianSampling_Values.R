@@ -31,296 +31,161 @@ library(gridExtra)
 library(cowplot) 
 
 Plotting_Gametic_R1 <- function(df, phased_type, plotting_styles) {
-  # Ensure the phased_type is valid
-  if (!all(phased_type %in% c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k", "Real"))) {
-    stop("Invalid phased_type. Choose either True, Phased_NoGE_2k, Phased_WithGE_2k, Phased_NoGE_50k, Phased_WithGE_50k or 'Real'.")
-  }
+  # 1. Validation
+  valid_phases <- c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", 
+                    "Phased_NoGE_50k", "Phased_WithGE_50k", "Real")
+  if (!all(phased_type %in% valid_phases)) stop("Invalid phased_type.")
   
-  # Ensure the plotting_styles are valid
-  valid_styles <- c("histogram", "density", "scatter")
-  if (!all(plotting_styles %in% valid_styles)) {
-    stop("Invalid plotting_styles. Choose either 'histogram', 'density', or 'scatter'.")
-  }
+  # 2. Define scales with text wrapping (\n) to prevent cutoff
+  color_scale <- scale_color_manual(name = "Assigned parent\nhaplotype",
+                                    values = c("Maternal" = "blue", "Paternal" = "red"))
   
-  # Define color and fill scales for consistency
-  color_scale <- scale_color_manual(name = "Assigned parent haplotype",
-                                    values = c("Maternal" = "blue", "Paternal" = "red"),
-                                    labels = c("Maternal", "Paternal"))
-  fill_scale <- scale_fill_manual(name = "Assigned parent haplotype",
-                                  values = c("Maternal" = "blue", "Paternal" = "red"),
-                                  labels = c("Maternal", "Paternal"))
+  fill_scale <- scale_fill_manual(name = "Assigned parent\nhaplotype",
+                                  values = c("Maternal" = "blue", "Paternal" = "red"))
   
-  # Initialize an empty list to store plots
+  # 3. Generate individual plots
   plots <- list()
-  
-  # Generate plots for each phased_type
   for (phase in phased_type) {
-    # Initialize list to store plots for current phased_type
     phase_plots <- list()
-    # Filter data for this specific phase loop
     curr_df <- df[df$Phasing == phase, ]
-    # Calculate means for the vertical lines
     m_mean <- mean(curr_df$Maternal_Mendelian, na.rm = TRUE)
     p_mean <- mean(curr_df$Dpc_Mendelian, na.rm = TRUE)
-    # Generate plots for each plotting_style
+    
     for (style in plotting_styles) {
       if (style == "histogram") {
-        p <- ggplot(df[df$Phasing == phase, ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
-          geom_histogram(aes(y = ..count..), binwidth = 1, alpha = 0.7, position = 'identity') +
-          geom_histogram(aes(x = Dpc_Mendelian, y = ..count.., fill = "Paternal"), 
+        p <- ggplot(curr_df, aes(x = Maternal_Mendelian, fill = "Maternal")) +
+          geom_histogram(aes(y = after_stat(count)), binwidth = 1, alpha = 0.7, position = 'identity') +
+          geom_histogram(aes(x = Dpc_Mendelian, y = after_stat(count), fill = "Paternal"), 
                          binwidth = 1, alpha = 0.7, position = 'identity') +
-          labs(title = paste(phase),
-               x = "Mendelian Sampling", y = "Count") +
+          labs(title = paste(phase), x = "Mendelian Sampling", y = "Count") +
           theme_minimal() +
-          theme(strip.text = element_blank(),
-                plot.title = element_text(size = 20),
-                axis.title.x = element_text(size = 16),
-                axis.title.y = element_text(size = 16),
-                axis.text = element_text(size = 14),
-                legend.position = "none") +  # Remove legend from individual plots
-          fill_scale +  # Apply fill scale
-          facet_wrap(~ Phasing, ncol = 1)  # Separate plots by Phasing type
-        
+          theme(plot.title = element_text(size = 20),
+                axis.title = element_text(size = 16),
+                legend.position = "none") +
+          fill_scale
       } else if (style == "density") {
-        p <- ggplot(df[df$Phasing == phase, ], aes(x = Maternal_Mendelian, color = "Maternal")) +
-          geom_density(aes(y = ..scaled..), alpha = 0.7) +
-          geom_density(aes(x = Dpc_Mendelian, y = ..scaled.., color = "Paternal"), alpha = 0.7) +
+        p <- ggplot(curr_df, aes(x = Maternal_Mendelian, color = "Maternal")) +
+          geom_density(aes(y = after_stat(scaled)), alpha = 0.7) +
+          geom_density(aes(x = Dpc_Mendelian, y = after_stat(scaled), color = "Paternal"), alpha = 0.7) +
           geom_vline(xintercept = m_mean, color = "blue", linetype = "dashed") +
           geom_vline(xintercept = p_mean, color = "red", linetype = "dashed") +
-          labs(title = paste(phase),
-               x = "Mendelian Sampling", y = "Density") +
+          labs(title = paste(phase), x = "Mendelian Sampling", y = "Density") +
           theme_minimal() +
-          theme(strip.text = element_blank(),
-                plot.title = element_text(size = 20),
-                axis.title.x = element_text(size = 16),
-                axis.title.y = element_text(size = 16),
-                axis.text = element_text(size = 14),
-                legend.position = "none") +  # Remove legend from individual plots
-          color_scale +  # Apply color scale
-          facet_wrap(~ Phasing, ncol = 1)  # Separate plots by Phasing type
-        
+          theme(plot.title = element_text(size = 20),
+                axis.title = element_text(size = 16),
+                legend.position = "none") +
+          color_scale
       }
-      # Add plot to current phased_type plots list
       phase_plots[[style]] <- p
     }
-    
-    # Combine plots for the current phased_type into a single row
-    phase_plots_combined <- do.call(cowplot::plot_grid, c(phase_plots, list(nrow = 1)))
-    
-    # Add combined plots to the main plots list
-    plots[[phase]] <- phase_plots_combined
+    plots[[phase]] <- do.call(cowplot::plot_grid, c(phase_plots, list(nrow = 1)))
   }
   
-  # Combine all phased_type plots into a single row
-  combined_plots <- do.call(cowplot::plot_grid, c(plots, list(nrow = 1)))
+  # 4. Grid Logic
+  num_rows <- if (length(phased_type) > 3) 2 else 1
+  combined_plots <- do.call(cowplot::plot_grid, c(plots, list(nrow = num_rows)))
   
-  # Add legend only if "Phased_GE" is in the phased_type
-  if ("Phased_GE" %in% phased_type) {
-    # Extract legend from one of the "Phased_GE" plots
-    example_plot <- ggplot(df[df$Phasing == "Phased_GE", ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
-      geom_histogram(aes(y = ..count..), binwidth = 1, alpha = 0.7, position = 'identity') +
-      geom_histogram(aes(x = Dpc_Mendelian, y = ..count.., fill = "Paternal"), 
-                     binwidth = 1, alpha = 0.7, position = 'identity') +
-      fill_scale +  # Apply fill scale
-      theme_minimal()
-    
-    # Extract legend using get_legend from cowplot
-    legend <- get_legend(
-      example_plot + 
-        theme(legend.position = "right",
-              legend.title = element_text(size = 16),   # Increase legend title font size
-              legend.text = element_text(size = 14))   # Increase legend text font size
-    )
-    
-    # Combine plots and legend
-    combined_plots_with_legend <- plot_grid(
-      combined_plots,
-      legend,
-      ncol = 2,
-      rel_widths = c(4, 1)  # Adjust widths as needed
-    )
-  } else {
-    # Print combined plots without a legend
-    combined_plots_with_legend <- combined_plots
-  }
+  # 5. Extract Legend with extra padding
+  example_plot <- ggplot(df[df$Phasing == phased_type[1], ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
+    geom_histogram(alpha = 0.7) +
+    geom_histogram(aes(x = Dpc_Mendelian, fill = "Paternal"), alpha = 0.7) +
+    fill_scale + 
+    theme_minimal() +
+    theme(legend.position = "right",
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          # Add margin to the right of the legend so it doesn't touch the edge
+          legend.margin = margin(0, 20, 0, 0)) 
   
-  # Print the combined plots with or without the legend
-  print(combined_plots_with_legend)
-}
-
-Plotting_Gametic_Density_R1 <- function(df, phased_types) {
+  legend <- cowplot::get_legend(example_plot)
   
-  # 1. Define the color scale
-  color_scale <- scale_color_manual(
-    name = "Assigned parent haplotype",
-    values = c("Maternal" = "blue", "Paternal" = "red")
+  # Combine with more room for the legend (0.85 / 0.15)
+  final_output <- cowplot::plot_grid(
+    combined_plots,
+    legend,
+    ncol = 2,
+    rel_widths = c(0.85, 0.15)
   )
   
-  # 2. Initialize a list to store the individual plots
-  plot_list <- list()
-  
-  # 3. Loop through each phased_type to create a separate plot
-  for (phase in phased_types) {
-    
-    # Filter data for this specific phase
-    phase_df <- df[df$Phasing == phase, ]
-    
-    # Skip if no data for this phase
-    if (nrow(phase_df) == 0) next
-    
-    # Calculate means for the vertical lines
-    mean_mat <- mean(phase_df$Maternal_Mendelian, na.rm = TRUE)
-    mean_pat <- mean(phase_df$Dpc_Mendelian, na.rm = TRUE)
-    
-    # Create the plot
-    p <- ggplot(phase_df) +
-      # Maternal Density (adjust = 0.5 helps with the 'shifted peak' issue)
-      geom_density(aes(x = Maternal_Mendelian, color = "Maternal", y = ..scaled..), 
-                   size = 1, adjust = 0.5) +
-      geom_vline(xintercept = mean_mat, color = "blue", linetype = "dashed", alpha = 0.5) +
-      
-      # Paternal Density
-      geom_density(aes(x = Dpc_Mendelian, color = "Paternal", y = ..scaled..), 
-                   size = 1, adjust = 0.5) +
-      geom_vline(xintercept = mean_pat, color = "red", linetype = "dashed", alpha = 0.5) +
-      
-      labs(title = phase, x = "Mendelian Sampling", y = "Scaled Density") +
-      theme_minimal() +
-      theme(
-        legend.position = "none", # Hide individual legends to save space
-        plot.title = element_text(size = 14, face = "bold")
-      ) +
-      color_scale
-    
-    # Store plot in the list
-    plot_list[[phase]] <- p
-  }
-  
-  # 4. Combine all plots into a grid
-  # We can set ncol to 2 or 3 depending on how many plots you have
-  combined_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = 2)
-  
-  # 5. Extract a legend from one plot to show at the bottom
-  # Create a dummy plot just for the legend
-  legend_plot <- ggplot(phase_df) +
-    geom_density(aes(x = Maternal_Mendelian, color = "Maternal")) +
-    geom_density(aes(x = Dpc_Mendelian, color = "Paternal")) +
-    color_scale + theme(legend.position = "bottom")
-  
-  legend <- cowplot::get_legend(legend_plot)
-  
-  # Return the grid with the legend at the bottom
-  return(cowplot::plot_grid(combined_plot, legend, ncol = 1, rel_heights = c(1, 0.1)))
+  return(final_output)
 }
 
 Plotting_Gametic_R2 <- function(df, phased_type, plotting_styles) {
-  # Ensure the phased_type is valid
-  if (!all(phased_type %in% c("Phased_GE", "Phased_nGE",  "Pre_Phased_nGE", "Pre_Phased_GE","True", "Real"))) {
-    stop("Invalid phased_type. Choose either 'Phased_GE', 'Phased_nGE',  'Pre_Phased_nGE', 'Pre_Phased_GE', 'True' or 'Real'.")
-  }
+  # 1. Validation
+  valid_phases <- c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", 
+                    "Phased_NoGE_50k", "Phased_WithGE_50k", "Real")
+  if (!all(phased_type %in% valid_phases)) stop("Invalid phased_type.")
   
-  # Ensure the plotting_styles are valid
-  valid_styles <- c("histogram", "density", "scatter")
-  if (!all(plotting_styles %in% valid_styles)) {
-    stop("Invalid plotting_styles. Choose either 'histogram', 'density', or 'scatter'.")
-  }
+  # 2. Define scales with text wrapping (\n) to prevent cutoff
+  color_scale <- scale_color_manual(name = "Assigned parent\nhaplotype",
+                                    values = c("Maternal" = "blue"))
   
-  # Define color and fill scales for consistency
-  color_scale <- scale_color_manual(name = "Assigned parent haplotype",
-                                    values = c("Maternal" = "blue"),
-                                    labels = c("Maternal"))
-  fill_scale <- scale_fill_manual(name = "Assigned parent haplotype",
-                                  values = c("Maternal" = "blue"),
-                                  labels = c("Maternal"))
+  fill_scale <- scale_fill_manual(name = "Assigned parent\nhaplotype",
+                                  values = c("Maternal" = "blue"))
   
-  # Initialize an empty list to store plots
+  # 3. Generate individual plots
   plots <- list()
-  
-  # Generate plots for each phased_type
   for (phase in phased_type) {
-    # Initialize list to store plots for current phased_type
     phase_plots <- list()
+    curr_df <- df[df$Phasing == phase, ]
+    m_mean <- mean(curr_df$Maternal_Mendelian, na.rm = TRUE)
     
-    # Generate plots for each plotting_style
     for (style in plotting_styles) {
       if (style == "histogram") {
-        p <- ggplot(df[df$Phasing == phase, ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
-          geom_histogram(aes(y = ..count..), binwidth = 1, alpha = 0.7, position = 'identity') +
-          labs(title = paste(phase),
-               x = "Mendelian Sampling", y = "Count") +
+        p <- ggplot(curr_df, aes(x = Maternal_Mendelian, fill = "Maternal")) +
+          geom_histogram(aes(y = after_stat(count)), binwidth = 1, alpha = 0.7, position = 'identity') +
+          labs(title = paste(phase), x = "Mendelian Sampling", y = "Count") +
           theme_minimal() +
-          theme(strip.text = element_blank(),
-                plot.title = element_text(size = 20),
-                axis.title.x = element_text(size = 16),
-                axis.title.y = element_text(size = 16),
-                axis.text = element_text(size = 14),
-                legend.position = "none") +  # Remove legend from individual plots
-          fill_scale +  # Apply fill scale
-          facet_wrap(~ Phasing, ncol = 1)  # Separate plots by Phasing type
-        
+          theme(plot.title = element_text(size = 20),
+                axis.title = element_text(size = 16),
+                legend.position = "none") +
+          fill_scale
       } else if (style == "density") {
-        p <- ggplot(df[df$Phasing == phase, ], aes(x = Maternal_Mendelian, color = "Maternal")) +
-          geom_density(aes(y = ..scaled..), alpha = 0.7) +
-          labs(title = paste(phase),
-               x = "Mendelian Sampling", y = "Density") +
+        p <- ggplot(curr_df, aes(x = Maternal_Mendelian, color = "Maternal")) +
+          geom_density(aes(y = after_stat(scaled)), alpha = 0.7) +
+          geom_vline(xintercept = m_mean, color = "blue", linetype = "dashed") +
+          labs(title = paste(phase), x = "Mendelian Sampling", y = "Density") +
           theme_minimal() +
-          theme(strip.text = element_blank(),
-                plot.title = element_text(size = 20),
-                axis.title.x = element_text(size = 16),
-                axis.title.y = element_text(size = 16),
-                axis.text = element_text(size = 14),
-                legend.position = "none") +  # Remove legend from individual plots
-          color_scale +  # Apply color scale
-          facet_wrap(~ Phasing, ncol = 1)  # Separate plots by Phasing type
-        
+          theme(plot.title = element_text(size = 20),
+                axis.title = element_text(size = 16),
+                legend.position = "none") +
+          color_scale
       }
-      # Add plot to current phased_type plots list
       phase_plots[[style]] <- p
     }
-    
-    # Combine plots for the current phased_type into a single row
-    phase_plots_combined <- do.call(cowplot::plot_grid, c(phase_plots, list(nrow = 1)))
-    
-    # Add combined plots to the main plots list
-    plots[[phase]] <- phase_plots_combined
+    plots[[phase]] <- do.call(cowplot::plot_grid, c(phase_plots, list(nrow = 1)))
   }
   
-  # Combine all phased_type plots into a single row
-  combined_plots <- do.call(cowplot::plot_grid, c(plots, list(nrow = 1)))
+  # 4. Grid Logic
+  num_rows <- if (length(phased_type) > 3) 2 else 1
+  combined_plots <- do.call(cowplot::plot_grid, c(plots, list(nrow = num_rows)))
   
-  # Add legend only if "Phased_GE" is in the phased_type
-  if ("Phased_GE" %in% phased_type) {
-    # Create a plot to extract the legend from
-    legend_plot <- ggplot(df[df$Phasing == "Phased_GE", ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
-      geom_histogram(aes(y = ..count..), binwidth = 1, alpha = 0.7, position = 'identity') +
-      fill_scale +  # Apply fill scale
-      theme_minimal() +
-      theme(legend.position = "right",
-            legend.title = element_text(size = 16),   # Increase legend title font size
-            legend.text = element_text(size = 14))   # Increase legend text font size
-    
-    # Extract legend using get_legend from cowplot
-    legend <- cowplot::get_legend(legend_plot)
-    
-    # Combine plots and legend
-    combined_plots_with_legend <- plot_grid(
-      combined_plots,
-      legend,
-      ncol = 2,
-      rel_widths = c(4, 1)  # Adjust widths as needed
-    )
-  } else {
-    # Print combined plots without a legend
-    combined_plots_with_legend <- combined_plots
-  }
+  # 5. Extract Legend with extra padding
+  example_plot <- ggplot(df[df$Phasing == phased_type[1], ], aes(x = Maternal_Mendelian, fill = "Maternal")) +
+    geom_histogram(alpha = 0.7) +
+    fill_scale + 
+    theme_minimal() +
+    theme(legend.position = "right",
+          legend.title = element_text(size = 16),
+          legend.text = element_text(size = 14),
+          # Add margin to the right of the legend so it doesn't touch the edge
+          legend.margin = margin(0, 20, 0, 0)) 
   
-  # Print the combined plots with or without the legend
-  print(combined_plots_with_legend)
+  legend <- cowplot::get_legend(example_plot)
+  
+  # Combine with more room for the legend (0.85 / 0.15)
+  final_output <- cowplot::plot_grid(
+    combined_plots,
+    legend,
+    ncol = 2,
+    rel_widths = c(0.85, 0.15)
+  )
+  
+  return(final_output)
 }
 
-
 calculate_gametic_relatedness_R1 <- function(sorted_offspring_haplotypes, all_haplotypes, pedigree) {
-  # Initialize an empty data frame to store results
+,  # Initialize an empty data frame to store results
   gametic_results <- data.frame(
     Offspring_ID = character(),
     Mother_ID = character(),
@@ -487,9 +352,25 @@ Haplo_R2_WithGE_SNP50k <-  Route2_WithGE_SNP50k
 #**••• Route 1 - with reconstructed pedigree and both parents info •••**
 ############################################################################################################
 
+# Extract IDs from the target matrix (the smaller one)
+target_ids <- sub("_.*", "", rownames(Haplo_R1_SimTrue$real_results_flipped))
+# Get unique IDs to make the filtering more efficient
+unique_target_ids <- unique(target_ids)
+
+# Extract IDs from the large matrix
+true_haplo_ids <- sub("_.*", "", rownames(true_haplotypes))
+
+# Filter true_haplotypes
+true_haplotypes_filtered <- true_haplotypes[true_haplo_ids %in% unique_target_ids, ]
+
+# Verify the results
+dim(true_haplotypes_filtered)
+
+
+
 #** SIMULATED **|
-colnames(Haplo_R1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
-Route1_Gametic_True <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Haplo_R1_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes, pedigree = Sim_pedigree_mat)
+colnames(Haplo_R1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)[1:3200]
+Route1_Gametic_True <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Haplo_R1_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes[,1:3200], pedigree = Worker_pedigree)
 Route1_Gametic_True$Phasing <- "True"
 
 Route1_Gametic_NoGE_phased_SNP2k <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Haplo_R1_NoGE_SNP2k$results_flipped, all_haplotypes = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Alpha_pedigree_2k_NoGE)
@@ -506,8 +387,8 @@ Route1_Gametic_WithGE_phased_SNP50k <- calculate_gametic_relatedness_R1(sorted_o
 Route1_Gametic_WithGE_phased_SNP50k$Phasing <- "Phased_WithGE_50k"
 
 
-Gametic_df <- rbind(Route1_Gametic_True, Route1_Gametic_NoGE_phased_SNP2k, Route1_Gametic_WithGE_phased_SNP2k, Route1_Gametic_NoGE_phased_SNP50k, Route1_Gametic_WithGE_phased_SNP50k)
-
+Route1_Mendelian_sim_df <- rbind(Route1_Gametic_True, Route1_Gametic_NoGE_phased_SNP2k, Route1_Gametic_WithGE_phased_SNP2k, Route1_Gametic_NoGE_phased_SNP50k, Route1_Gametic_WithGE_phased_SNP50k)
+save(Route1_Mendelian_sim_df, file = "Outputs/MendelianSampling/Route1_Mend_Sim.Rdata")
 
 #** REAL DATA **|
 Slov_pedigree_rec_filtered <- Slov_pedigree_rec[Slov_pedigree_rec$dpc != 0 & Slov_pedigree_rec$mother != 0,]
@@ -516,43 +397,54 @@ Route1_Gametic_Slov$Phasing <- "Real"
 
 
 #•• Plotting ••
-Plotting_Gametic_R1(df = Gametic_df, phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
+Plotting_Gametic_R1(df = Route1_Mendelian_sim_df, phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
 Plotting_Gametic_R1(df = Route1_Gametic_Slov, phased_type = c("Real"), plotting_styles = "density")
+Route1_plot <- Plotting_Gametic_R1(df = rbind(Route1_Mendelian_sim_df, Route1_Gametic_Slov), phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k", "Real"), plotting_styles = "density")
 
+setwd(workingDir)
+dir.create("Outputs/MendelianSampling")
+ggsave(plot = Route1_plot, filename = "Outputs/MendelianSampling/Route1_test.png", width = 25, height = 10) #Something weird here - need to fix 
 
 ############################################################################################################
 #**••• Route 2 - with maternal pedigree and maternal info only •••**
 ############################################################################################################
 
 #** SIMULATED **
-colnames(Route2_True_FLIP$real_results_flipped) <- colnames(true_haplotypes)
-Route2_Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_True_FLIP$real_results_flipped , all_haplotypes = true_haplotypes, pedigree = Sim_pedigree_mat)
+colnames(Haplo_R2_SimTrue$real_results_flipped) <- colnames(true_haplotypes)[1:3200]
+Route2_Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes[,1:3200], pedigree = Worker_pedigree)
 Route2_Gametic_TRUE$Phasing <- "True"
 
-Route2_Gametic_NoGE_phased_2k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_NoGE_SNP2k$phased_results_flipped, all_haplotypes = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Sim_pedigree_mat)
+Route2_Gametic_NoGE_phased_2k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_NoGE_SNP2k$phased_results_flipped, all_haplotypes = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_NoGE_phased_2k$Phasing <- "Phased_NoGE_2k"
 
-Route2_Gametic_WithGE_phased_2k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_WithGE_SNP2k$phased_results_flipped, all_haplotypes = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Sim_pedigree_mat)
+Route2_Gametic_WithGE_phased_2k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_WithGE_SNP2k$phased_results_flipped, all_haplotypes = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_WithGE_phased_2k$Phasing <- "Phased_WithGE_2k"
 
-Route2_Gametic_NoGE_phased_50k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_NoGE_SNP50k$phased_results_flipped, all_haplotypes = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Sim_pedigree_mat)
+Route2_Gametic_NoGE_phased_50k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_NoGE_SNP50k$phased_results_flipped, all_haplotypes = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_NoGE_phased_50k$Phasing <- "Phased_NoGE_50k"
 
-Route2_Gametic_WithGE_phased_50k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_WithGE_SNP50k$phased_results_flipped, all_haplotypes = WithGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Sim_pedigree_mat)
+Route2_Gametic_WithGE_phased_50k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_WithGE_SNP50k$phased_results_flipped, all_haplotypes = WithGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_WithGE_phased_50k$Phasing <- "Phased_WithGE_50k"
 
 
-Gametic_df_R2 <- rbind(Route2_Gametic_True, Route2_Gametic_NoGE_phased_SNP2k, Route2_Gametic_WithGE_phased_SNP2k, Route2_Gametic_NoGE_phased_SNP50k, Route2_Gametic_WithGE_phased_SNP50k)
+Route2_Mendelian_sim_df <- rbind(Route2_Gametic_TRUE, Route2_Gametic_NoGE_phased_2k, Route2_Gametic_WithGE_phased_2k, Route2_Gametic_NoGE_phased_50k, Route2_Gametic_WithGE_phased_50k)
 
 
 #** REAL DATA **
-Slov_pedigree_mat_filtered <- Slov_pedigree_mat[Slov_pedigree_mat$mother != 0,] # Remove rows with unknown mothers 
+Slov_pedigree_mat_filtered <- Slov_pedigree_mat[Slov_pedigree_mat$dam != 0,] # Remove rows with unknown mothers 
 tmp <-sub("_.*", "", rownames(Slov_PhasedHaplotypes_matPed))
 tmp <- unique(tmp)
 Slov_pedigree_mat_filtered <- Slov_pedigree_mat_filtered[Slov_pedigree_mat_filtered$id %in% tmp,]
+colnames(Slov_pedigree_mat_filtered) <- c("id", "dpc", "mother")
 Route2_Gametic_Slov <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_Real$phased_results_flipped, all_haplotypes = Slov_PhasedHaplotypes_matPed, pedigree = Slov_pedigree_mat_filtered)
 Route2_Gametic_Slov$Phasing <- "Real"
 
 #•• Plotting ••
-Plotting_Gametic_R2(df = Gametic_df_R2, phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
+Plotting_Gametic_R2(df = Route2_Mendelian_sim_df, phased_type = c("Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
 Plotting_Gametic_R2(df = Route2_Gametic_Slov, phased_type = c("Real"), plotting_styles = c("density"))
+Route2_plot <- Plotting_Gametic_R2(df = rbind(Route2_Mendelian_sim_df, Route2_Gametic_Slov), phased_type = c("True","Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k", "Real"), plotting_styles = c("density"))
+
+save(Route2_Mendelian_sim_df, file = "Outputs/MendelianSampling/Route2_Mend_Sim.Rdata")
+
+
+save.image(file = paste0(workingDir, "/Data/Pipeline/8_Checking_Gametic_MendelianSampling.Rdata"))
