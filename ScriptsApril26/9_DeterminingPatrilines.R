@@ -562,27 +562,25 @@ plot_paternity_number_grid_SISTERONLY <- function(...) {
 ################################################################################
 #******* ROUTE 1 *******************************
 ################################################################################
-pathToPlink <- "/home/jana/bin/"
 workingDir <- "/home/jana/github/lstrachan_patrilines/"
-#pathToPlink <- "~/Desktop/PLINK/./"
-#workingDir = "~/Desktop/lstrachan_patrilines"
+workingDir = "~/Desktop/lstrachan_patrilines"
 setwd(workingDir)
 
 #••••• Simulated ••••• Can't do this with Real data since we don't have the father/drone info 
 
 #Load your Pop object that contains the fathers and the pedigree with the fathers id in there 
-Sim_pedigree_pre <- read.csv("/Data/worker_pedigree.csv")
-fathers_id_all <- Sim_pedigree_pre$father
-father_id_1 <- paste(father_id_all, "1", sep = "_")
+Sim_pedigree_mat <- read.csv("Data/worker_pedigree.csv")
+fathers_id_all <- Sim_pedigree_mat$father
+father_id_1 <- paste(fathers_id_all, "1", sep = "_")
 
-Simulated_pop <- load(paste0(workingDir,"/Data/Pop_withFathers.Rdata"))
+Simulated_pop <- load("Data/Pop_withFathers.Rdata")
 true_haplotypes <- pullSnpHaplo(PopMerged)
 
 #since they're coded as identical diploids we can just use one of them
 father_haplotypes_1 <- true_haplotypes[rownames(true_haplotypes) %in% father_id_1,]
 
 #replace _1 with _paternal so that it can all be compared 
-father_all_unique <- unique(father_id_all)
+father_all_unique <- unique(fathers_id_all)
 father_id_paternal <- father_all_unique[order(father_all_unique)]
 father_id_paternal <- paste(father_id_paternal, "paternal", sep = "_")
 
@@ -591,11 +589,13 @@ rownames(father_haplotype_pat) <- father_id_paternal
 
 #Load the outputs of 7_Haplotype_ParentageAssignments script
 # --- Simulated assigned haplotypes from 7_Haplotype_ParentAssignments script 
-Haplo_R1_SimTrue <-  read.csv("/Data/Haplo_Assignment/Route1_SimTrue.csv")
-Haplo_R1_NoGE_SNP2k <-  read.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP2k.csv")
-Haplo_R1_WithGE_SNP2k <-  read.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP2k.csv")
-Haplo_R1_NoGE_SNP50k <-  read.csv("/Data/Haplo_Assignment/Route1_NoGE_SNP50k.csv")
-Haplo_R1_WithGE_SNP50k <-  read.csv("/Data/Haplo_Assignment/Route1_WithGE_SNP50k.csv")
+
+# Load Rdata from the #7 script <---------------------------------------------------LOOK HERE
+Haplo_R1_SimTrue <-  Route1_SimTrue
+Haplo_R1_NoGE_SNP2k <-  Route1_NoGE_SNP2k
+Haplo_R1_WithGE_SNP2k <-  Route1_WithGE_SNP2k
+Haplo_R1_NoGE_SNP50k <-  Route1_NoGE_SNP50k
+Haplo_R1_WithGE_SNP50k <-  Route1_WithGE_SNP50k
 
 
 # Define the thresholds you want to test (takes a good while to run)
@@ -631,13 +631,12 @@ plot_paternity_number_grid_DRONES(PatR1_SimTrue_Haplo2)
 
 #••• SIMULATED ••• 
 
-#Load the outputs of 7_Haplotype_ParentageAssignments script
-# --- Simulated assigned haplotypes from 7_Haplotype_ParentAssignments script 
-Haplo_R2_SimTrue <-  read.csv("/Data/Haplo_Assignment/Route2_SimTrue.csv")
-Haplo_R2_NoGE_SNP2k <-  read.csv("/Data/Haplo_Assignment/Route2_NoGE_SNP2k.csv")
-Haplo_R2_WithGE_SNP2k <-  read.csv("/Data/Haplo_Assignment/Route2_WithGE_SNP2k.csv")
-Haplo_R2_NoGE_SNP50k <-  read.csv("/Data/Haplo_Assignment/Route2_NoGE_SNP50k.csv")
-Haplo_R2_WithGE_SNP50k <-  read.csv("/Data/Haplo_Assignment/Route2_WithGE_SNP50k.csv")
+#Load the outputs of 7_Haplotype_ParentageAssignments script <--------------------- LOOK HERE 
+Haplo_R2_SimTrue <-  Route2_SimTrue
+Haplo_R2_NoGE_SNP2k <-  Route2_NoGE_SNP2k
+Haplo_R2_WithGE_SNP2k <-  Route2_WithGE_SNP2k
+Haplo_R2_NoGE_SNP50k <-  Route2_NoGE_SNP50k
+Haplo_R2_WithGE_SNP50k <-  Route2_WithGE_SNP50k
 
 #Run 2 things: 
 #1. Run with haplotypes that have gone through route1 of haplotype parental assignment
@@ -667,5 +666,24 @@ plot_paternity_number_grid_SISTERONLY(
   Dataset1 = PatR2_SimTrue_Haplo2,
   Dataset2 = PatR2_NoGE_SNP2k_Haplo2,
   Dataset3= PatR2_WithGE_SNP2k_Haplo2)
+
+
+
+#••• REAL ••• 
+
+PatR2_Real_Haplo1 <- run_sister_clustering_tests(results_arg = Haplo_R1_Real$results$flipped,
+                                                 sister_thresholds = sister_thresholds,
+                                                 pedigree = Slov_pedigree_rec_filtered,
+                                                 simulated = FALSE)
+
+
+PatR2_Real_Haplo2 <- run_sister_clustering_tests(results_arg = Haplo_R2_Real$results$flipped,
+                                                 sister_thresholds = sister_thresholds,
+                                                 pedigree = Slov_pedigree_mat_filtered,
+                                                 simulated = FALSE)
+
+
+
+
 
 

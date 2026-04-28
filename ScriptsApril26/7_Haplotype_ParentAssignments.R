@@ -448,6 +448,8 @@ check_dist <- function(off_hap, par_geno, j){
 
 Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotypes = NULL, method = NULL){
   
+  colnames(pedigree) <- c("id", "father", "mother")
+
   if (perfect_haplotypes == TRUE){
     haplotypes <- true_haplotypes
     map <- true_map
@@ -456,11 +458,12 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     real_results_lengths <- list()
     flipped_haplotypes <- list()
     
+
     
     for (i in 1:nrow(pedigree)) {
       offspring_id <- as.character(pedigree$id[i])
       dam_id <- as.character(pedigree$mother[i])
-      sire_id <- as.character(pedigree$dpc[i])
+      sire_id <- as.character(pedigree$father[i])
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x,'_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row,]
@@ -493,7 +496,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       mat_results <- list() 
       
       
-      for (j in unique(map[, 2])) {
+      for (j in 1) { #unique(map[, 2])) {
         print(x = c(i,j))
         Chr_map <- map[map$chr == j, ]
         Chr_markerNames <- Chr_map[, 1]
@@ -655,8 +658,8 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     for (i in 1:nrow(pedigree)) {
       offspring_id <- pedigree$id[i]
-      dam_id <- pedigree$dam[i]
-      sire_id <- pedigree$sire[i]
+      dam_id <- pedigree$mother[i]
+      sire_id <- pedigree$father[i]
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row, ]
@@ -688,7 +691,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       pat_results <- list()
       mat_results <- list() 
       
-      for (j in 1){#unique(map[, 1])) {
+      for (j in 1) { #unique(map[, 1])) {
         print(x = c(i,j))
         Chr_map <- map[map$V1 == j, ]
         Chr_markerNames <- Chr_map[, 2]
@@ -838,7 +841,8 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
 }
 
 Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotypes = NULL, method = NULL) {
-  
+  colnames(pedigree) <- c("id", "father", "mother")
+
   # First block: Real haplotypes case
   if (perfect_haplotypes == TRUE & Data_type == "True") {
     haplotypes <- true_haplotypes
@@ -847,7 +851,9 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     real_results_methods <- list()
     real_results_lengths <- list()
     flipped_haplotypes <- list()
-    
+
+
+
     for (i in 1:nrow(pedigree)) {
       offspring_id <- as.character(pedigree$id[i])
       dam_id <- as.character(pedigree$mother[i])
@@ -872,7 +878,7 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       pat_results <- list()
       mat_results <- list()
       
-      for (j in unique(map[, 2])) {
+      for (j in 1) { #unique(map[, 2])) {
         print(x = c(i, j))
         Chr_map <- map[map$chr == j, ]
         Chr_markerNames <- Chr_map[, 1]
@@ -977,7 +983,7 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     for (i in 1:nrow(pedigree)) {
       print(paste("Pedigree -", i))
       offspring_id <- pedigree$id[i]
-      dam_id <- pedigree$dam[i]
+      dam_id <- pedigree$mother[i]
       
       offspring_row <- rownames(haplotypes)[sapply(rownames(haplotypes), function(x) strsplit(x, '_')[[1]][1]) %in% offspring_id]
       offspring_haplotypes_i <- haplotypes[offspring_row, ]
@@ -1166,7 +1172,7 @@ names(Rec_pedigree_50k_WithGE) <- cols
 
 #Get haplotypes made in 6_Converting_PhasedVCF scripts
 setwd(workingDir)
-load("Outputs/Beagle_phasing/All_Phased_Haplotypes.RData")
+load("Data/Pipeline/6_Converting_PhasedVCF.Rdata")
 
 NoGE_map_2k <- read.table("Data/Sim_NoGE/SNP_4_NoGE_QC_ACformat.map")
 WithGE_map_2k <- read.table("Data/Sim_WithGE/SNP_4_WithGE_QC_ACformat.map")
@@ -1178,16 +1184,12 @@ WithGE_map_50k <- read.table("Data/Sim_WithGE/SNP_5_WithGE_QC_ACformat.map")
 #####################################################################################
 print("Reading in real data")
 # Pedigree prior to ped reconstruction
-Slov_pedigree_pre <- read.table("Data/Real_data/Real_Data_pedigree.txt")
-colnames(Slov_pedigree_pre) <- cols
+Slov_pedigree_mat <- read.table("Data/Real_data/Real_Data_pedigree.txt")
+colnames(Slov_pedigree_mat) <- cols
 
 #After reconstruction
-Slov_pedigree_post <- read.table("Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
-colnames(Slov_pedigree_post) <- cols
-
-
-Slov_PhasedHaplotypes_matPed <- "Load here"
-Slov_PhasedHaplotypes_recPed <- "Load here"
+Slov_pedigree_rec <- read.table("Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
+colnames(Slov_pedigree_rec) <- cols
 
 Slov_map <- read.table("Data/Real_data/Slov_fM_QC_ACformat.map")
 
@@ -1197,17 +1199,25 @@ Slov_map <- read.table("Data/Real_data/Slov_fM_QC_ACformat.map")
 print("Checking accuracy of phasing for simulated data")
 # ••• Simulated •••
 
+print("Checking accuracy")
+print("2K SNP data, rec ped, NoGE")
 true_vs_NoGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
+print("2K SNP data, mat ped, NoGE")
 true_vs_NoGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
-
+print("2K SNP data, rec ped, WithGE")
 true_vs_WithGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
+print("2K SNP data, mat ped, WithGE")
 true_vs_WithGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
+print("50K SNP data, rec ped, NoGE")
 true_vs_NoGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
+print("50K SNP data, mat ped, NoGE")
 true_vs_NoGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
+print("50K SNP data, rec ped, WithGE")
 true_vs_WithGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
+print("50K SNP data, mat ped, WithGE")
 true_vs_WithGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 
 
@@ -1228,17 +1238,21 @@ Rec_pedigree_50k_NoGE_filtered <- Rec_pedigree_50k_NoGE[Rec_pedigree_50k_NoGE$si
 Rec_pedigree_2k_WithGE_filtered <- Rec_pedigree_2k_WithGE[Rec_pedigree_2k_WithGE$sire != 0,]
 Rec_pedigree_50k_WithGE_filtered <- Rec_pedigree_50k_WithGE[Rec_pedigree_50k_WithGE$sire != 0,]
 
-
+print("2K SNP data")
 #2k SNP
+print("NoGE")
 Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP2k")
+print("WithGE")
 Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP2k")
 
-
+print("50K SNP data")
 #50k SNP
+print("NoGE")
 Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP50k")
+print("WithGE")
 Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP50k")
 
-
+save.image(paste0(workingDir, "Data/Pipeline/7_Haplotype_ParentAssignments.RData"))
 
 # #Checking haplotypes post flip to see if something has happened
 # colnames(Route1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
@@ -1252,6 +1266,7 @@ Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = R
 #####################################################################################
 print("Route2")
 
+Worker_pedigree <- Worker_pedigree[, c("id", "dpc", "mother")]
 #True haplotypes (should work perfectly)
 Route2_SimTrue <- Route2_flipping(perfect_haplotypes = TRUE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "True")
 
@@ -1263,7 +1278,9 @@ Route2_WithGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Wo
 Route2_NoGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "NoGE_SNP50k")
 Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP50k")
 
+save.image(paste0(workingDir, "Data/Pipeline/7_Haplotype_ParentAssignments.RData"))
 
+##########################################################3
 print("Assigning haplotype PO for real data")
 #Real data
 Slov_pedigree_mat_filtered <- Slov_pedigree_mat[Slov_pedigree_mat$dam != 0,] # Remove rows with unknown mothers 
