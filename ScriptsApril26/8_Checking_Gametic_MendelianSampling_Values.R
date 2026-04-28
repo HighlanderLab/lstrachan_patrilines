@@ -32,8 +32,8 @@ library(cowplot)
 
 Plotting_Gametic_R1 <- function(df, phased_type, plotting_styles) {
   # Ensure the phased_type is valid
-  if (!all(phased_type %in% c("Phased_GE", "Phased_nGE",  "Pre_Phased_nGE", "Pre_Phased_GE","True", "Real"))) {
-    stop("Invalid phased_type. Choose either 'Phased_GE', 'Phased_nGE',  'Pre_Phased_nGE', 'Pre_Phased_GE', 'True' or 'Real'.")
+  if (!all(phased_type %in% c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k", "Real"))) {
+    stop("Invalid phased_type. Choose either True, Phased_NoGE_2k, Phased_WithGE_2k, Phased_NoGE_50k, Phased_WithGE_50k or 'Real'.")
   }
   
   # Ensure the plotting_styles are valid
@@ -57,7 +57,11 @@ Plotting_Gametic_R1 <- function(df, phased_type, plotting_styles) {
   for (phase in phased_type) {
     # Initialize list to store plots for current phased_type
     phase_plots <- list()
-    
+    # Filter data for this specific phase loop
+    curr_df <- df[df$Phasing == phase, ]
+    # Calculate means for the vertical lines
+    m_mean <- mean(curr_df$Maternal_Mendelian, na.rm = TRUE)
+    p_mean <- mean(curr_df$Dpc_Mendelian, na.rm = TRUE)
     # Generate plots for each plotting_style
     for (style in plotting_styles) {
       if (style == "histogram") {
@@ -81,6 +85,8 @@ Plotting_Gametic_R1 <- function(df, phased_type, plotting_styles) {
         p <- ggplot(df[df$Phasing == phase, ], aes(x = Maternal_Mendelian, color = "Maternal")) +
           geom_density(aes(y = ..scaled..), alpha = 0.7) +
           geom_density(aes(x = Dpc_Mendelian, y = ..scaled.., color = "Paternal"), alpha = 0.7) +
+          geom_vline(xintercept = m_mean, color = "blue", linetype = "dashed") +
+          geom_vline(xintercept = p_mean, color = "red", linetype = "dashed") +
           labs(title = paste(phase),
                x = "Mendelian Sampling", y = "Density") +
           theme_minimal() +
@@ -140,6 +146,71 @@ Plotting_Gametic_R1 <- function(df, phased_type, plotting_styles) {
   
   # Print the combined plots with or without the legend
   print(combined_plots_with_legend)
+}
+
+Plotting_Gametic_Density_R1 <- function(df, phased_types) {
+  
+  # 1. Define the color scale
+  color_scale <- scale_color_manual(
+    name = "Assigned parent haplotype",
+    values = c("Maternal" = "blue", "Paternal" = "red")
+  )
+  
+  # 2. Initialize a list to store the individual plots
+  plot_list <- list()
+  
+  # 3. Loop through each phased_type to create a separate plot
+  for (phase in phased_types) {
+    
+    # Filter data for this specific phase
+    phase_df <- df[df$Phasing == phase, ]
+    
+    # Skip if no data for this phase
+    if (nrow(phase_df) == 0) next
+    
+    # Calculate means for the vertical lines
+    mean_mat <- mean(phase_df$Maternal_Mendelian, na.rm = TRUE)
+    mean_pat <- mean(phase_df$Dpc_Mendelian, na.rm = TRUE)
+    
+    # Create the plot
+    p <- ggplot(phase_df) +
+      # Maternal Density (adjust = 0.5 helps with the 'shifted peak' issue)
+      geom_density(aes(x = Maternal_Mendelian, color = "Maternal", y = ..scaled..), 
+                   size = 1, adjust = 0.5) +
+      geom_vline(xintercept = mean_mat, color = "blue", linetype = "dashed", alpha = 0.5) +
+      
+      # Paternal Density
+      geom_density(aes(x = Dpc_Mendelian, color = "Paternal", y = ..scaled..), 
+                   size = 1, adjust = 0.5) +
+      geom_vline(xintercept = mean_pat, color = "red", linetype = "dashed", alpha = 0.5) +
+      
+      labs(title = phase, x = "Mendelian Sampling", y = "Scaled Density") +
+      theme_minimal() +
+      theme(
+        legend.position = "none", # Hide individual legends to save space
+        plot.title = element_text(size = 14, face = "bold")
+      ) +
+      color_scale
+    
+    # Store plot in the list
+    plot_list[[phase]] <- p
+  }
+  
+  # 4. Combine all plots into a grid
+  # We can set ncol to 2 or 3 depending on how many plots you have
+  combined_plot <- cowplot::plot_grid(plotlist = plot_list, ncol = 2)
+  
+  # 5. Extract a legend from one plot to show at the bottom
+  # Create a dummy plot just for the legend
+  legend_plot <- ggplot(phase_df) +
+    geom_density(aes(x = Maternal_Mendelian, color = "Maternal")) +
+    geom_density(aes(x = Dpc_Mendelian, color = "Paternal")) +
+    color_scale + theme(legend.position = "bottom")
+  
+  legend <- cowplot::get_legend(legend_plot)
+  
+  # Return the grid with the legend at the bottom
+  return(cowplot::plot_grid(combined_plot, legend, ncol = 1, rel_heights = c(1, 0.1)))
 }
 
 Plotting_Gametic_R2 <- function(df, phased_type, plotting_styles) {
@@ -446,7 +517,7 @@ Route1_Gametic_Slov$Phasing <- "Real"
 
 #•• Plotting ••
 Plotting_Gametic_R1(df = Gametic_df, phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
-Plotting_Gametic_R1(df = Route1_Gametic_Slov, phased_type = c("Real"), plotting_styles = c("density"))
+Plotting_Gametic_R1(df = Route1_Gametic_Slov, phased_type = c("Real"), plotting_styles = "density")
 
 
 ############################################################################################################
