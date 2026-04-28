@@ -228,7 +228,7 @@ for (pedPhase in c("recPedigree", "matPedigree")) {
     for (n in c(4, 5)) {
       print(paste("Processing", GEType, "SNP", n, pedPhase))
       results_list <- list()
-      for (chr in 1:1) { #16
+      for (chr in 1:16) { 
         print(chr)
         vcf_gz <- paste0("SNP_", n, "_", GEType, "_PHASED_", pedPhase, "_chr", chr, ".vcf.gz")
         map <- paste0("SNP_", n, "_", GEType, "_PHASED_", pedPhase, "_chr", chr, ".map")
@@ -245,12 +245,14 @@ for (pedPhase in c("recPedigree", "matPedigree")) {
 #Reconstructed pedigree
 #2 = 2K, 5 = 50K
 #Get the haplotypes of the phasing with maternal pedigree
+print("Arranging haplotypes for maternal pedigree")
 setwd(workingDir)
 NoGE_SNP2k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "4", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "NoGE_SNP4_matPedigree_AllChrs")
 WithGE_SNP2k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "4", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "WithGE_SNP4_matPedigree_AllChrs")
 NoGE_SNP50k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "5", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "NoGE_SNP5_matPedigree_AllChrs")
 WithGE_SNP50k_PhasedHaplotypes_matPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "5", ped_recon = TRUE, pedigree_name = "Data/SimData_Pedigree_Full_Maternal.txt", haplo_name = "WithGE_SNP5_matPedigree_AllChrs")
 
+print("Arranging haplotypes for reconstructed pedigree")
 #Get the haplotypes phased with reconstructed pedugree
 NoGE_SNP2k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "NoGE", n = "4", ped_recon = TRUE, pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt", haplo_name = "NoGE_SNP4_recPedigree_AllChrs")
 WithGE_SNP2k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "WithGE", n = "4", ped_recon = TRUE, pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt", haplo_name = "WithGE_SNP4_recPedigree_AllChrs")
@@ -261,13 +263,13 @@ WithGE_SNP50k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "With
 
 ######################################################################################3
 #********* REAL DATA ******************
-
+print("Processing real data")
 setwd("Outputs/Beagle_phasing")
 
 #Phased with pedigree
 results_list <- list()
 for (pedPhase in c("recPedigree", "matPedigree")) {
-  for (chr in 1:1){
+  for (chr in 1:16){
     vcf_gz <- paste0("Slov_PHASED_", pedPhase, "_chr",chr,".vcf.gz")
     map <- paste0("Slov_PHASED_", pedPhase, "_chr",chr,".map")
     df <- convert_VCF(vcf_file = vcf_gz, map_file = map)
@@ -290,10 +292,12 @@ Slov_prephased_haplotypes <- convert_VCF(vcf_file = vcf_file, map_file = map_fil
 Slov_PhasedHaplotypes_matPed <- Haplotype_using_pedigree_realData(pedigree_name = "Data/Real_data/Real_Data_pedigree.txt", haplo_name = "Slov_PhasedHaplotypes_matPedigree_AllChrs") #Slov_PhasedHaplotypes_NOPed
 Slov_PhasedHaplotypes_recPed <- Haplotype_using_pedigree_realData(pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_Real.txt", haplo_name = "Slov_PhasedHaplotypes_recPedigree_AllChrs") #Slov_PhasedHaplotypes_WithPed
 
-
+print("Saving data")
+system(paste0("rm ", workingDir, "Outputs/Beagle_phasing/All_Phased_Haplotypes.RData"))
 save(list = c("Slov_PhasedHaplotypes_matPed", "Slov_PhasedHaplotypes_recPed",
               "NoGE_SNP2k_PhasedHaplotypes_matPed", "WithGE_SNP2k_PhasedHaplotypes_matPed", "NoGE_SNP50k_PhasedHaplotypes_matPed", "WithGE_SNP50k_PhasedHaplotypes_matPed", 
               "NoGE_SNP2k_PhasedHaplotypes_recPed", "WithGE_SNP2k_PhasedHaplotypes_recPed", "NoGE_SNP50k_PhasedHaplotypes_recPed", "WithGE_SNP50k_PhasedHaplotypes_recPed"),
             file = "Outputs/Beagle_phasing/All_Phased_Haplotypes.RData")
 
+system(paste0("rm ", workingDir, "/Data/Pipeline/6_Converting_PhasedVCF.Rdata"))
 save.image(file = paste0(workingDir, "/Data/Pipeline/6_Converting_PhasedVCF.Rdata"))
