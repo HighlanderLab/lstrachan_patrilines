@@ -305,7 +305,8 @@ setwd(workingDir)
 ############################################################################################################
 
 #LOAD Rdata from script 7_Haplotype_ParentAssignments
-load("Location where the Rdata is stored")
+setwd(workingDir)
+load("Data/Pipeline/7_Haplotype_ParentAssignments.Rdata")
 #Needs to contain the mat and rec pedigrees (including the filtered ones), true haplotypes, map files, and the assigned haplotypes for Route1 and Route2. 
 
 #--- Real Pedigrees --- 
@@ -369,8 +370,8 @@ dim(true_haplotypes_filtered)
 
 
 #** SIMULATED **|
-colnames(Haplo_R1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)[1:3200]
-Route1_Gametic_True <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Haplo_R1_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes[,1:3200], pedigree = Worker_pedigree)
+colnames(Haplo_R1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)#[1:3200]
+Route1_Gametic_True <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Haplo_R1_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes, pedigree = Worker_pedigree) # use true_haplotypes [,1:3200] if using the 1 chromosome version 
 Route1_Gametic_True$Phasing <- "True"
 
 Route1_Gametic_NoGE_phased_SNP2k <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Haplo_R1_NoGE_SNP2k$results_flipped, all_haplotypes = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Alpha_pedigree_2k_NoGE)
@@ -410,8 +411,8 @@ ggsave(plot = Route1_plot, filename = "Outputs/MendelianSampling/Route1_test.png
 ############################################################################################################
 
 #** SIMULATED **
-colnames(Haplo_R2_SimTrue$real_results_flipped) <- colnames(true_haplotypes)[1:3200]
-Route2_Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes[,1:3200], pedigree = Worker_pedigree)
+colnames(Haplo_R2_SimTrue$real_results_flipped) <- colnames(true_haplotypes)#[1:3200]
+Route2_Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes, pedigree = Worker_pedigree) # use true_haplotypes [,1:3200] if using the 1 chromosome version 
 Route2_Gametic_TRUE$Phasing <- "True"
 
 Route2_Gametic_NoGE_phased_2k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Haplo_R2_NoGE_SNP2k$phased_results_flipped, all_haplotypes = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
