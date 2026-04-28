@@ -1012,6 +1012,7 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     
     for (i in 1:nrow(pedigree)) {
+      print(paste("Pedigree -", i))
       offspring_id <- pedigree$id[i]
       dam_id <- pedigree$dam[i]
       
@@ -1308,9 +1309,15 @@ save(Route2_NoGE_SNP50k, file ="/Data/Haplo_Assignment/Route2_NoGE_SNP50k.csv")
 save(Route2_WithGE_SNP50k,  file = "/Data/Haplo_Assignment/Route2_WithGE_SNP50k.csv")
 
 #Real data
-Slov_pedigree_pre_filtered <- Slov_pedigree_pre[Slov_pedigree_pre$dam != 0,]
+Slov_pedigree_pre_filtered <- Slov_pedigree_pre[Slov_pedigree_pre$dam != 0,] # Remove rows with unknown mothers 
+tmp <-sub("_.*", "", rownames(Slov_PhasedHaplotypes_matPed))
+tmp <- unique(tmp)
+Slov_pedigree_pre_filtered <- Slov_pedigree_pre_filtered[Slov_pedigree_pre_filtered$id %in% tmp,]
 Route2_Real <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_pre_filtered, method = "power_mean", Data_type = "Real_Slov_data")
 save("/Data/Haplo_Assignment/Route2_Real.csv")
+
+
+
 
 
 
