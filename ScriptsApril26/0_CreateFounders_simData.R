@@ -22,7 +22,7 @@ workingDir = args[2]
 
 # Set working directory
 setwd(workingDir)
-dir.create(paste0("/SimRep", Rep), showWarnings = FALSE)
+dir.create(paste0("SimRep", Rep), showWarnings = FALSE)
 setwd(paste0(workingDir, "/SimRep", Rep))
 dir.create("Data", showWarnings = FALSE)
 dir.create("Outputs", showWarnings = FALSE)
@@ -140,56 +140,8 @@ for (n in 2:6){ #we create the first array (larger one) outside of the loop and 
 ##################################################################################
 
 
-# Check the relatedness in the real data
-realGeno_meta = read.csv(paste0(workingDir, "Data/SNP_samples_2022.csv"))
-realGeno = read.table(paste0(workingDir, "Data/newPat_CleanIndsMarkers.raw"), header=T)
-table(realGeno$IID %in% realGeno_meta$snp_id)
-realGeno_meta = realGeno_meta %>% dplyr::filter(snp_id %in% realGeno$IID)
-table(realGeno_meta$biotype)
-
-realGeno_IID = realGeno$IID
-realGeno_geno = realGeno[, 7:ncol(realGeno)]
-realGeno_snpnames = colnames(realGeno)
-realGeno_geno[is.na(realGeno_geno)] = -9
-rownames(realGeno_geno) = realGeno_IID
-realGeno_G = as.data.frame(Gmatrix(SNPmatrix = as.matrix(realGeno_geno),
-                                   missing = -9,
-                                   ploidy = 2)) %>%
-  rownames_to_column("IID") %>%
-  pivot_longer(-IID, names_to = "IID2")
-
-realGeno_G %>% filter(IID == IID2) %>%
-  ggplot() + geom_histogram(aes(x = value - 1))
-
-realGeno_G %>% filter(IID == IID2) %>% summarise(mean(value - 1))
-
-#Only queens
-realGeno_G %>% filter(IID == IID2) %>% filter(IID %in% realGeno_meta$snp_id[realGeno_meta$biotype == "queen"]) %>%
-  ggplot() + geom_histogram(aes(x = value - 1))
-
-realGeno_G %>% filter(IID == IID2) %>% filter(IID %in% realGeno_meta$snp_id[realGeno_meta$biotype == "queen"]) %>%
-  summarise(mean(value-1))
-
-#Only DPQ
-realGeno_G %>% filter(IID == IID2) %>% filter(IID %in% realGeno_meta$snp_id[realGeno_meta$biotype == "dpc"]) %>%
-  ggplot() + geom_histogram(aes(x = value - 1))
-
-realGeno_G %>% filter(IID == IID2) %>% filter(IID %in% realGeno_meta$snp_id[realGeno_meta$biotype == "dpc"]) %>%
-  summarise(mean(value-1))
-
-realGeno_G$Pop1 = sapply(realGeno_G$IID, FUN = function(x) realGeno_meta$biotype[realGeno_meta$snp_id == x])
-realGeno_G$Pop2 = sapply(realGeno_G$IID2, FUN = function(x) realGeno_meta$biotype[realGeno_meta$snp_id == x])
-realGeno_G$Data = "Real"
-realGeno_G$Gen = "Real"
-realGeno_G$Pop = ifelse(realGeno_G$Pop1 == "queen" & realGeno_G$Pop2 == "queen", "queen",
-                        ifelse(realGeno_G$Pop1 == "dpc" & realGeno_G$Pop2 == "dpc", "dpc",
-                               ifelse(realGeno_G$Pop1 == "worker" & realGeno_G$Pop2 == "worker", "worker", "across")))
-realGeno_G$Mating = "Real"
-
-
-
 inbreeding = data.frame()
-inbreeding = rbind(inbreeding, realGeno_G)
+
 ##################################################################################
 ##################################################################################
 
@@ -364,4 +316,4 @@ meanRel_queen = inbreeding %>%
 inbreeding$PopGen <- paste0(inbreeding$Pop, inbreeding$Gen)
 meanRel_queen$PopGen <- paste0(meanRel_queen$Pop, meanRel_queen$Gen)
 
-save.image(file = "Data/Pipeline/2_FounderPop_inbred.RData")
+save.image(file = "Pipeline/2_FounderPop_inbred.RData")
