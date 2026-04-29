@@ -73,9 +73,15 @@ rm(list = ls())
 
 
 
-workingDir = "~/Desktop/lstrachan_patrilines"
-workingDir = "/home/jana/github/lstrachan_patrilines"
-setwd(workingDir)
+args = commandArgs(trailingOnly=TRUE)
+workingDir = args[1]
+softwareDir = args[2]
+pathToPlink <- softwareDir 
+pathToBeagle <- softwareDir
+
+setwd(paste0(workingDir, "/Real_data/"))
+
+load("Pipeline/4_Converting_PhasedVCF.Rdata")
 
 #####################################################################################
 #************************** FUNCTIONS ******************************************
@@ -344,6 +350,13 @@ weighing_haplotypes <- function(off_hap, par_geno, method = NULL, result = NULL,
   # Separate the runs of FALSE and TRUE
   false_runs <- rle_result$lengths[rle_result$values == FALSE]
   true_runs <- rle_result$lengths[rle_result$values == TRUE]
+  if (length(rle_result$values) == 1) {
+    if (rle_result$values) {
+      false_runs <- 0
+    } else {
+      true_runs <- 0
+    }
+  }
   
   # Define weights as the lengths of the runs
   false_weights <- false_runs
@@ -461,6 +474,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
 
     
     for (i in 1:nrow(pedigree)) {
+      print(i)
       offspring_id <- as.character(pedigree$id[i])
       dam_id <- as.character(pedigree$mother[i])
       sire_id <- as.character(pedigree$father[i])
@@ -496,8 +510,8 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       mat_results <- list() 
       
       
-      for (j in 1) { #unique(map[, 2])) {
-        print(x = c(i,j))
+      for (j in unique(map[, 2])) {
+        #print(x = c(i,j))
         Chr_map <- map[map$chr == j, ]
         Chr_markerNames <- Chr_map[, 1]
         
@@ -526,61 +540,114 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         max_diff <- max(abs_diff)
         
         
+        sum_tests <- sum(
+        (max_diff == abs(score_1) & max_diff != abs(score_2) & max_diff != abs(score_3) & max_diff != abs(score_4)),
+        (max_diff == abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3) & max_diff != abs(score_4)),
+        (max_diff == abs(score_3) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_4)),
+        (max_diff == abs(score_4) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3)),
+        (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) > abs(score_2)),
+        (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) < abs(score_2)),
+        (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) < abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) > abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_2) &  max_diff == abs(score_3) & max_diff == abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_4) &  max_diff != abs(score_2) & max_diff != abs(score_3)),
+        (max_diff == abs(score_2) & max_diff == abs(score_3) &  max_diff != abs(score_1) & max_diff != abs(score_4)),
+        (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) < abs(score_3)),
+        (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) > abs(score_3)),
+        (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) < abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) < abs(score_4))
+            )
+        
+        if (sum_tests > 1) {
+          print(c(i,j))
+          print(c(score_1, score_2, score_3, score_4))
+          stop("Multiple if statements are true, something is wrong with the logic")
+        } else if (sum_tests == 0) {
+          print(c(i,j))
+          print(c(score_1, score_2, score_3, score_4))
+          stop("None of the if statements are true, something is wrong with the logic")
+        }
+
+        #Only 1 is the absolute clear parent 
+        {
         if (max_diff == abs(score_1) & max_diff != abs(score_2) & max_diff != abs(score_3) & max_diff != abs(score_4)) {
-          message("Hap1 is paternal - assume Hap2 is maternal")
+          #message("Hap1 is paternal - assume Hap2 is maternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         } 
-        if (max_diff == abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3) & max_diff != abs(score_4)) {
-          message("Hap1 is maternal - assume Hap2 is paternal")
+        else if (max_diff == abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3) & max_diff != abs(score_4)) {
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         } 
-        if (max_diff == abs(score_3) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_4)) {
-          message("Hap2 is paternal - assume Hap1 is maternal")
+        else if (max_diff == abs(score_3) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_4)) {
+          #message("Hap2 is paternal - assume Hap1 is maternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         } 
-        if (max_diff == abs(score_4) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_4) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3))  {
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) > abs(score_2))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        
+        #Two on the same haplotype have equally high scores, use the other haplotype to work it out 
+        else if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) > abs(score_2))  {
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) < abs(score_2))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) < abs(score_2))  {
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) < abs(score_4))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) < abs(score_4))  {
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) > abs(score_4))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) > abs(score_4))  {
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_2) &  max_diff == abs(score_3) & max_diff == abs(score_4))  {
+        else if (max_diff == abs(score_1) & max_diff == abs(score_4) &  max_diff != abs(score_2) & max_diff != abs(score_3))  {
+          #message("Hap1 is paternal and Hap2 is maternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_2) & max_diff == abs(score_3) &  max_diff != abs(score_1) & max_diff != abs(score_4))  {
+          #message("Hap1 is maternal and Hap2 is paternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) > abs(score_4)) {
+          #message("Hap1 is maternal and Hap2 is paternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) < abs(score_4)) {
+          #message("Hap1 is paternal and Hap2 is maternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) > abs(score_3)) {
+          #message("Hap1 is paternal and Hap2 is maternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) < abs(score_3)) {
+          #message("Hap1 is maternal and Hap2 is paternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_1) & max_diff == abs(score_2) &  max_diff == abs(score_3) & max_diff == abs(score_4))  {
           stop("All values are equal")
-          
+        } else {
+          stop("No if statement is true, something is wrong with the logic")
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_4) &  max_diff != abs(score_2) & max_diff != abs(score_3))  {
-          message("Hap1 is paternal and Hap2 is maternal - both are max")
-          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
-          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
-        }
-        if (max_diff == abs(score_2) & max_diff == abs(score_3) &  max_diff != abs(score_1) & max_diff != abs(score_4))  {
-          message("Hap1 is maternal and Hap2 is paternal - both are max")
-          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
-          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
-          
-        }
+      }
         
         merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
         identified_sire_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
@@ -657,6 +724,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     } else (stop("Arguments not met"))
     
     for (i in 1:nrow(pedigree)) {
+      print(i)
       offspring_id <- pedigree$id[i]
       dam_id <- pedigree$mother[i]
       sire_id <- pedigree$father[i]
@@ -691,8 +759,8 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       pat_results <- list()
       mat_results <- list() 
       
-      for (j in 1) { #unique(map[, 1])) {
-        print(x = c(i,j))
+      for (j in unique(map[, 1])) {
+        #print(x = c(i,j))
         Chr_map <- map[map$V1 == j, ]
         Chr_markerNames <- Chr_map[, 2]
         
@@ -733,64 +801,117 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         # 
         # } 
         
+
+        # Do a test if multiple of the ifs from below are true, if yes, throw and error
+        # Then turn the if statements into else if
+        sum_tests <- sum(
+        (max_diff == abs(score_1) & max_diff != abs(score_2) & max_diff != abs(score_3) & max_diff != abs(score_4)),
+        (max_diff == abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3) & max_diff != abs(score_4)),
+        (max_diff == abs(score_3) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_4)),
+        (max_diff == abs(score_4) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3)),
+        (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) > abs(score_2)),
+        (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) < abs(score_2)),
+        (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) < abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) > abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_2) &  max_diff == abs(score_3) & max_diff == abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_4) &  max_diff != abs(score_2) & max_diff != abs(score_3)),
+        (max_diff == abs(score_2) & max_diff == abs(score_3) &  max_diff != abs(score_1) & max_diff != abs(score_4)),
+        (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) < abs(score_3)),
+        (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) > abs(score_3)),
+        (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) < abs(score_4)),
+        (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) < abs(score_4))
+            )
+        
+        if (sum_tests > 1) {
+          print(c(i,j))
+          print(c(score_1, score_2, score_3, score_4))
+          stop("Multiple if statements are true, something is wrong with the logic")
+        } else if (sum_tests == 0) {
+          print(c(i,j))
+          print(c(score_1, score_2, score_3, score_4))
+          stop("None of the if statements are true, something is wrong with the logic")
+        }
+
         #Only 1 is the absolute clear parent 
+        {
         if (max_diff == abs(score_1) & max_diff != abs(score_2) & max_diff != abs(score_3) & max_diff != abs(score_4)) {
-          message("Hap1 is paternal - assume Hap2 is maternal")
+          #message("Hap1 is paternal - assume Hap2 is maternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         } 
-        if (max_diff == abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3) & max_diff != abs(score_4)) {
-          message("Hap1 is maternal - assume Hap2 is paternal")
+        else if (max_diff == abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3) & max_diff != abs(score_4)) {
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         } 
-        if (max_diff == abs(score_3) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_4)) {
-          message("Hap2 is paternal - assume Hap1 is maternal")
+        else if (max_diff == abs(score_3) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_4)) {
+          #message("Hap2 is paternal - assume Hap1 is maternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         } 
-        if (max_diff == abs(score_4) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_4) & max_diff != abs(score_2) & max_diff != abs(score_1) & max_diff != abs(score_3))  {
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
         
         #Two on the same haplotype have equally high scores, use the other haplotype to work it out 
-        if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) > abs(score_2))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) > abs(score_2))  {
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) < abs(score_2))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) < abs(score_2))  {
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) < abs(score_4))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) < abs(score_4))  {
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) > abs(score_4))  {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+        else if (max_diff == abs(score_1) & max_diff == abs(score_2) &  abs(score_3) > abs(score_4))  {
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_2) &  max_diff == abs(score_3) & max_diff == abs(score_4))  {
+        else if (max_diff == abs(score_1) & max_diff == abs(score_4) &  max_diff != abs(score_2) & max_diff != abs(score_3))  {
+          #message("Hap1 is paternal and Hap2 is maternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_2) & max_diff == abs(score_3) &  max_diff != abs(score_1) & max_diff != abs(score_4))  {
+          #message("Hap1 is maternal and Hap2 is paternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) > abs(score_4)) {
+          #message("Hap1 is maternal and Hap2 is paternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) < abs(score_4)) {
+          #message("Hap1 is paternal and Hap2 is maternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) > abs(score_3)) {
+          #message("Hap1 is paternal and Hap2 is maternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_2) & max_diff == abs(score_4) & abs(score_1) < abs(score_3)) {
+          #message("Hap1 is maternal and Hap2 is paternal - both are max")
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
+        }
+        else if (max_diff == abs(score_1) & max_diff == abs(score_2) &  max_diff == abs(score_3) & max_diff == abs(score_4))  {
           stop("All values are equal")
-          
+        } else {
+          stop("No if statement is true, something is wrong with the logic")
         }
-        if (max_diff == abs(score_1) & max_diff == abs(score_4) &  max_diff != abs(score_2) & max_diff != abs(score_3))  {
-          message("Hap1 is paternal and Hap2 is maternal - both are max")
-          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
-          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
-        }
-        if (max_diff == abs(score_2) & max_diff == abs(score_3) &  max_diff != abs(score_1) & max_diff != abs(score_4))  {
-          message("Hap1 is maternal and Hap2 is paternal - both are max")
-          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
-          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
-        }
-        
+      }
         
         merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
         identified_sire_haplo <- grep("_paternal$", rownames(merged_haps), value = TRUE)
@@ -819,7 +940,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         
         method_results[[j]] <- as.data.frame(testing_methods)
         length_results[[j]] <- as.data.frame(lengths_all)
-      }
+        }
       
       phased_results_methods[[i]] <- do.call(rbind,method_results)
       phased_results_lengths[[i]] <- do.call(rbind, length_results)
@@ -855,6 +976,7 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
 
 
     for (i in 1:nrow(pedigree)) {
+      print(i)
       offspring_id <- as.character(pedigree$id[i])
       dam_id <- as.character(pedigree$mother[i])
       
@@ -878,8 +1000,8 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       pat_results <- list()
       mat_results <- list()
       
-      for (j in 1) { #unique(map[, 2])) {
-        print(x = c(i, j))
+      for (j in unique(map[, 2])) {
+        #print(x = c(i, j))
         Chr_map <- map[map$chr == j, ]
         Chr_markerNames <- Chr_map[, 1]
         
@@ -902,12 +1024,12 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         max_diff <- max(abs_diff)
         
         if (max_diff == abs(score_1) & max_diff != abs(score_2)) {
-          message("Hap1 is maternal - assume Hap2 is paternal")
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
         if (max_diff == abs(score_2) & max_diff != abs(score_1)) {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
@@ -981,7 +1103,7 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
     
     
     for (i in 1:nrow(pedigree)) {
-      print(paste("Pedigree -", i))
+      print(i)
       offspring_id <- pedigree$id[i]
       dam_id <- pedigree$mother[i]
       
@@ -1004,7 +1126,7 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
       pat_results <- list()
       mat_results <- list()
       
-      for (j in 1){#unique(map[, 1])) {
+      for (j in unique(map[, 1])) {
         print(x = c(i, j))
         Chr_map <- map[map[,1] == j, ]
         Chr_markerNames <- Chr_map[, 2]
@@ -1026,17 +1148,22 @@ Route2_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
         max_diff <- max(abs_diff)
         
         if (max_diff == abs(score_1) & max_diff != abs(score_2)) {
-          message("Hap1 is maternal - assume Hap2 is paternal")
+          #message("Hap1 is maternal - assume Hap2 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
         if (max_diff == abs(score_2) & max_diff != abs(score_1)) {
-          message("Hap2 is maternal - assume Hap1 is paternal")
+          #message("Hap2 is maternal - assume Hap1 is paternal")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
         if (max_diff == abs(score_1) & max_diff == abs(score_2)) {
-          stop("Both haplotypes are assumed to be maternal")
+          print("Both haplotypes are assumed to be maternal, randomly assigning one to be paternal")
+          matSample = as.logical(sample(c(0, 1), size=1))
+          patSample = as.logical(abs(1 - matSample))
+          Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = patSample, offspring_id = offspring_id)
+          Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = matSample, offspring_id = offspring_id)
+
         }
         
         merged_haps <- rbind(Offspring_Hap1_chr, Offspring_Hap2_chr)
@@ -1142,146 +1269,26 @@ check_haplotype_postFlip <- function(complete_haplotypes = NULL, results = NULL,
 }
 
 
-#####################################################################################
-#**** Get the true simulated haplotypes and phased haplotypes ******
-#####################################################################################
-print("Reading in simulated data")
-load(paste0(workingDir,"/Data/SP_object.Rdata"))
-Simulated_SP <- SP
-Simulated_pop <- load(paste0(workingDir,"/Data/Pop_withFathers.Rdata"))
-true_haplotypes <- pullSnpHaplo(PopMerged)
-true_map <- getGenMap(SP)
-
-#Pedigree prior to reconstruction ####################################################
-
-Worker_pedigree <- read.csv("Data/worker_pedigree.csv")
-
-#Pedigree post reconstruction (with AlphaAssign) ########################################
-Rec_pedigree_2k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_NoGE.txt")
-Rec_pedigree_50k_NoGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_NoGE.txt")
-
-Rec_pedigree_2k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_2k_WithGE.txt")
-Rec_pedigree_50k_WithGE <- read.table("Outputs/AlphaAssign/Alpha_pedigree_50k_WithGE.txt")
-
-cols <- c("id", "sire", "dam")
-names(Rec_pedigree_2k_NoGE) <- cols
-names(Rec_pedigree_50k_NoGE) <- cols
-names(Rec_pedigree_2k_WithGE) <- cols
-names(Rec_pedigree_50k_WithGE) <- cols
-
-
-#Get haplotypes made in 6_Converting_PhasedVCF scripts
-setwd(workingDir)
-load("Data/Pipeline/6_Converting_PhasedVCF.Rdata")
-
-NoGE_map_2k <- read.table("Data/Sim_NoGE/SNP_4_NoGE_QC_ACformat.map")
-WithGE_map_2k <- read.table("Data/Sim_WithGE/SNP_4_WithGE_QC_ACformat.map")
-NoGE_map_50k <- read.table("Data/Sim_NoGE/SNP_5_NoGE_QC_ACformat.map")
-WithGE_map_50k <- read.table("Data/Sim_WithGE/SNP_5_WithGE_QC_ACformat.map")
 
 #####################################################################################
 #**** Get the real data phased haplotypes ******
 #####################################################################################
 print("Reading in real data")
 # Pedigree prior to ped reconstruction
-Slov_pedigree_mat <- read.table("Data/Real_data/Real_Data_pedigree.txt")
+cols <- c("id", "sire", "dam")
+Slov_pedigree_mat <- read.table("Data/Real_Data_pedigree.txt")
 colnames(Slov_pedigree_mat) <- cols
 
 #After reconstruction
 Slov_pedigree_rec <- read.table("Outputs/AlphaAssign/Alpha_pedigree_Real.txt")
 colnames(Slov_pedigree_rec) <- cols
 
-Slov_map <- read.table("Data/Real_data/Slov_fM_QC_ACformat.map")
-
-#####################################################################################
-#*** Check the different phasing versions compared to the real and prephased data just to check similarity ***
-#####################################################################################
-print("Checking accuracy of phasing for simulated data")
-# ••• Simulated •••
-
-print("Checking accuracy")
-print("2K SNP data, rec ped, NoGE")
-true_vs_NoGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
-print("2K SNP data, mat ped, NoGE")
-true_vs_NoGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
-
-print("2K SNP data, rec ped, WithGE")
-true_vs_WithGEphasedSNP2krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree)
-print("2K SNP data, mat ped, WithGE")
-true_vs_WithGEphasedSNP2kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
-
-print("50K SNP data, rec ped, NoGE")
-true_vs_NoGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
-print("50K SNP data, mat ped, NoGE")
-true_vs_NoGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
-
-print("50K SNP data, rec ped, WithGE")
-true_vs_WithGEphasedSNP50krecPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Worker_pedigree )
-print("50K SNP data, mat ped, WithGE")
-true_vs_WithGEphasedSNP50kmatPed <- check_haplotype(true_haplotypes = true_haplotypes, results = WithGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
-
-
-#####################################################################################
-#**               Haplotype parent-of-origin assignments                         **
-
-#**Route 1: use pedigree reconstruction's pedigree and use both dam and sire pedigree ID to assign haplotype parental origins **
-#####################################################################################
-print("Assigning haplotype PO for simulated data")
-print("Route1")
-#True haplotypes (should work perfectly)
-Route1_SimTrue <- Route1_flipping(perfect_haplotypes = TRUE, pedigree = Worker_pedigree, method = "power_mean")
-
-
-#Editing route 1 pedigrees - can't have sire's present 
-Rec_pedigree_2k_NoGE_filtered <- Rec_pedigree_2k_NoGE[Rec_pedigree_2k_NoGE$sire != 0,]
-Rec_pedigree_50k_NoGE_filtered <- Rec_pedigree_50k_NoGE[Rec_pedigree_50k_NoGE$sire != 0,]
-Rec_pedigree_2k_WithGE_filtered <- Rec_pedigree_2k_WithGE[Rec_pedigree_2k_WithGE$sire != 0,]
-Rec_pedigree_50k_WithGE_filtered <- Rec_pedigree_50k_WithGE[Rec_pedigree_50k_WithGE$sire != 0,]
-
-print("2K SNP data")
-#2k SNP
-print("NoGE")
-Route1_NoGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP2k")
-print("WithGE")
-Route1_WithGE_SNP2k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_2k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP2k")
-
-print("50K SNP data")
-#50k SNP
-print("NoGE")
-Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_NoGE_filtered, method = "power_mean", Data_type = "NoGE_SNP50k")
-print("WithGE")
-Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP50k")
-
-save.image(paste0(workingDir, "Data/Pipeline/7_Haplotype_ParentAssignments.RData"))
-
-# #Checking haplotypes post flip to see if something has happened
-# colnames(Route1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
-# 
-#Example:
-# true_vs_NoGE_SNP2k_FLIPPED <- check_haplotype_postFlip(complete_haplotypes = Route1_SimTrue$real_results_flipped, results = Route1_NoGE_SNP2k$results_flipped, pedigree = Rec_pedigree_2k_NoGE)
-# 
-
-#####################################################################################
-#** Route 2: DO NOT use pedigree reconstruction and use ONLY dam pedigree ID to assign haplotype parental origins **
-#####################################################################################
-print("Route2")
-
-Worker_pedigree <- Worker_pedigree[, c("id", "dpc", "mother")]
-#True haplotypes (should work perfectly)
-Route2_SimTrue <- Route2_flipping(perfect_haplotypes = TRUE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "True")
-
-#2k SNP
-Route2_NoGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean",Data_type = "NoGE_SNP2k")
-Route2_WithGE_SNP2k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP2k")
-
-#50k SNP
-Route2_NoGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "NoGE_SNP50k")
-Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Worker_pedigree, method = "power_mean", Data_type = "WithGE_SNP50k")
-
-save.image(paste0(workingDir, "Data/Pipeline/7_Haplotype_ParentAssignments.RData"))
+Slov_map <- read.table("Data/Slov_fM_QC_ACformat.map")
 
 ##########################################################3
 print("Assigning haplotype PO for real data")
+
+
 #Real data
 Slov_pedigree_mat_filtered <- Slov_pedigree_mat[Slov_pedigree_mat$dam != 0,] # Remove rows with unknown mothers 
 tmp <-sub("_.*", "", rownames(Slov_PhasedHaplotypes_matPed))
@@ -1290,7 +1297,11 @@ Slov_pedigree_mat_filtered <- Slov_pedigree_mat_filtered[Slov_pedigree_mat_filte
 
 #Real data
 Slov_pedigree_rec_filter <- Slov_pedigree_rec[Slov_pedigree_rec$sire != 0 & Slov_pedigree_rec$dam != 0,]
+
+print("Route1")
 Route1_Real <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_rec_filter, method = "power_mean", Data_type = "Real_Slov_data")
+print("Route2")
 Route2_Real <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_mat_filtered, method = "power_mean", Data_type = "Real_Slov_data")
 
-save.image(paste0(workingDir, "Data/Pipeline/7_Haplotype_ParentAssignments.RData"))
+print("Saving data")
+save.image("Pipeline/7_Haplotype_ParentAssignments.RData")

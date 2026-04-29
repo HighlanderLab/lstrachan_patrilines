@@ -7,9 +7,9 @@ library(tidyr)
 library(dplyr)
 
 args = commandArgs(trailingOnly=TRUE)
-workingDir = args[2]
-softwareDir = args[3]
-realDataDir = args[4]
+workingDir = args[1]
+softwareDir = args[2]
+realDataDir = args[3]
 pathToPlink <- softwareDir
 
 #pathToPlink <- "~/Desktop/PLINK/./"
@@ -19,13 +19,19 @@ source("ScriptsApril26/AB_to_12.R")
 
 
 dir.create("Real_data", showWarnings = FALSE)
+setwd(paste0(workingDir, "/Real_data/"))
+
+dir.create("Data", showWarnings = FALSE)
+dir.create("Outputs", showWarnings = FALSE)
+dir.create("Pipeline", showWarnings = FALSE)
+
 Slov_raw_map <- read.table(paste0(realDataDir, "/newPat.map"))
 Slov_raw_ped <- read.table(paste0(realDataDir, "/newPat.ped"))
 
 
 #Fix the pedigree *********************************
 Real_SNP_samples <- read.csv(paste0(realDataDir, "/SNP_samples_2022.csv"))
-write.csv(Real_SNP_samples, "Real_data/SNP_samples_2022.csv", row.names = FALSE) #Just to make sure the file is in the right place and can be read in later
+write.csv(Real_SNP_samples, "Data/SNP_samples_2022.csv", row.names = FALSE) #Just to make sure the file is in the right place and can be read in later
 queen_ids <- Real_SNP_samples[Real_SNP_samples$biotype == "queen",]
 queen_ids <- queen_ids$snp_id
 dpc_ids <- Real_SNP_samples[Real_SNP_samples$biotype == "dpc",]
@@ -33,7 +39,7 @@ unknown_workers <- Real_SNP_samples[Real_SNP_samples$microlocation == "na",]
 unknown_workers_id <- unknown_workers$snp_id
 
 Real_data_pedigree <- read.csv(paste0(realDataDir, "/Real_Data_pedigree.csv"))
-write.csv(Real_data_pedigree, "Real_data/Real_Data_pedigree.csv", row.names = FALSE) #Just to make sure the file is in the right place and can be read in later
+write.csv(Real_data_pedigree, "Data/Real_Data_pedigree.csv", row.names = FALSE) #Just to make sure the file is in the right place and can be read in later
 Slov_raw_ped$V4 <- 0
 # Match rows from pedigree to PED by ID
 match_ids <- match(Slov_raw_ped$V2, Real_data_pedigree$ID)
@@ -59,13 +65,13 @@ extract_parts <- function(x) {
 # Organise the map (we don't have the Genetic distance colummn yet and will add that at the end)
 Slov_map_refAll <- do.call(rbind, lapply(Fix_map, extract_parts))
 Slov_map_refAll$markerID <- Fix_map
-write.table(Slov_map_refAll, file = "Real_data/Slov_map_refAllele.map", quote = FALSE, col.names = TRUE, row.names = FALSE, sep = " ")
+write.table(Slov_map_refAll, file = "Data/Slov_map_refAllele.map", quote = FALSE, col.names = TRUE, row.names = FALSE, sep = " ")
 
-AB_to_12(ped_file = paste0(realDataDir, "/newPat.ped"), map_ref_file = "Real_data/Slov_map_refAllele.map", output_file_prefix = "Real_data/newPat_12")
+AB_to_12(ped_file = paste0(realDataDir, "/newPat.ped"), map_ref_file = "Data/Slov_map_refAllele.map", output_file_prefix = "Data/newPat_12")
 
-Slov_map <- read.table("Real_data/newPat_12.map")
+Slov_map <- read.table("Data/newPat_12.map")
 colnames(Slov_map) <- c("Chromosome", "markerID", "GeneticDistance", "Position")
-Slov_ped <- read.table("Real_data/newPat_12.ped")
+Slov_ped <- read.table("Data/newPat_12.ped")
 
 
 # Next we only want chromosomes beginning with NC (NW are those with unknown chromomsomes)
@@ -83,9 +89,9 @@ nrow(Slov_map_filtered)
 
 #Slov_ped_filtered <- filter_columns_nc(Slov_raw_ped)
 #ncol(Slov_ped_filtered)
-write.table(unique(Slov_map_filtered$markerID), "Real_data/Slov_map_filtered_markers.txt", row.names = FALSE, quote=F, col.names = FALSE)
+write.table(unique(Slov_map_filtered$markerID), "Data/Slov_map_filtered_markers.txt", row.names = FALSE, quote=F, col.names = FALSE)
 
-system(paste0(pathToPlink, "plink --file Real_data/newPat_12 --extract Real_data/Slov_map_filtered_markers.txt --recode --allow-extra-chr --out Real_data/Slov_fM"))
+system(paste0(pathToPlink, "/plink --file Data/newPat_12 --extract Data/Slov_map_filtered_markers.txt --recode --allow-extra-chr --out Data/Slov_fM"))
 
 
 # ---  Map Chromosomes numerically ---
@@ -115,7 +121,7 @@ Slov_map_filtered_chrom <- Slov_map_filtered %>%
 Slov_map_filtered_chrom <- Slov_map_filtered_chrom[, c("Chromosome", "markerID", "GeneticDistance", "Position")]
 
 # --- Save Final Map File --- (must be the same name as the ped file to work in PLINK)
-write.table(Slov_map_filtered_chrom, file = paste0(workingDir, "/Real_data/Slov_fM.map"), quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
+write.table(Slov_map_filtered_chrom, file = "Data/Slov_fM.map", quote = FALSE, col.names = FALSE, row.names = FALSE, sep = " ")
 
 
 
@@ -140,12 +146,12 @@ write.table(Slov_map_filtered_chrom, file = paste0(workingDir, "/Real_data/Slov_
 
 
 #### ---- PLINK quality control ###################################################################################################
-setwd(paste0(workingDir, "/Real_data"))
+setwd("Data")
 
 # Step 1: Quality control with PLINK
-system(paste0(pathToPlink, "plink --file Slov_fM --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_QC"))
+system(paste0(pathToPlink, "/plink --file Slov_fM --make-bed --geno 0.1 --mind 0.1 --maf 0.01 --out Slov_fM_QC"))
 
-system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --recode --out Slov_fM_QC"))
+system(paste0(pathToPlink, "/plink --bfile Slov_fM_QC --recode --out Slov_fM_QC"))
 Slov_fm_QC_ped <- read.table("Slov_fM_QC.ped")
 #Identify which queen was removed 
 ped_id <- Slov_fm_QC_ped$V2
@@ -155,7 +161,7 @@ removed_queen <- setdiff(queen_ids, ped_id)
 real_ped = read.csv(paste0(realDataDir, "/Real_Data_pedigree.csv"), header = TRUE, stringsAsFactors = FALSE)
 workers_to_remove <- data.frame(Fam = "AMEL", ID = real_ped$ID[real_ped$MID %in% removed_queen])
 write.table(workers_to_remove, "workers_to_remove.txt", quote = FALSE, row.names = FALSE, col.names = FALSE, sep=" ")
-system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --remove workers_to_remove.txt --recode --out Slov_fM_QC"))   
+system(paste0(pathToPlink, "/plink --bfile Slov_fM_QC --remove workers_to_remove.txt --recode --out Slov_fM_QC"))   
 
 # Step 2: Convert to VCF
 # system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --recode vcf --out Slov_fM_QC"))
@@ -253,4 +259,4 @@ system(paste0(pathToPlink, "plink --bfile Slov_fM_QC --remove workers_to_remove.
 
 
 
-save.image(file = paste0(workingDir, "/Real_data/1_RealData_prepared.Rdata"))
+save.image(file = paste0(workingDir, "/Real_data/Pipeline/1_RealData_prepared.Rdata"))

@@ -92,7 +92,7 @@ for (n in nSNP_array){
     system(paste0("sed -i 's/1_0/0/g' Data/SimData_Pedigree_Full_Maternal_Beagle.txt"))
     beagle_cmd_noGE <- paste0(
       "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_NoGE/SNP_", n, "_NoGE_QC_ACformat.vcf ped=Data/SimData_Pedigree_Full_Maternal_Beagle.txt out=Outputs/Beagle_phasing/SNP_", n, "_NoGE_PHASED_matPedigree_chr", 
-      i, " phase-its=5 impute-its=5 burnin-its=5 chrom=", i
+      i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
     )
     #window=200 overlap=50 
     system(beagle_cmd_noGE)
@@ -100,7 +100,7 @@ for (n in nSNP_array){
     
     beagle_cmd_withGE <- paste0(
       "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_WithGE/SNP_", n, "_WithGE_QC_ACformat.vcf ped=Data/SimData_Pedigree_Full_Maternal_Beagle.txt out=Outputs/Beagle_phasing/SNP_", n, "_WithGE_PHASED_matPedigree_chr", 
-      i, " phase-its=5 impute-its=5 burnin-its=5 chrom=", i
+      i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
     )
     #window=200 overlap=50 
     system(beagle_cmd_withGE)
@@ -118,7 +118,7 @@ for (n in nSNP_array){
 
     beagle_cmd_noGE <- paste0(
       "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_NoGE/SNP_", n, "_NoGE_QC_ACformat.vcf ped=Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_NoGE_Beagle.txt out=Outputs/Beagle_phasing/SNP_", n, "_NoGE_PHASED_recPedigree_chr", 
-      i, " phase-its=5 impute-its=5 burnin-its=5 chrom=", i
+      i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
     )
     system(beagle_cmd_noGE)
 
@@ -129,7 +129,7 @@ for (n in nSNP_array){
 
     beagle_cmd_withGE <- paste0(
       "java -jar ", pathToBeagle, "/beagle.4.0.jar gt=Data/Sim_WithGE/SNP_", n, "_WithGE_QC_ACformat.vcf ped=Outputs/AlphaAssign/Alpha_pedigree_", snp_size[as.character(n)], "_WithGE_Beagle.txt out=Outputs/Beagle_phasing/SNP_", n, "_WithGE_PHASED_recPedigree_chr", 
-      i, " phase-its=5 impute-its=5 burnin-its=5 chrom=", i
+      i, " phase-its=20 impute-its=20 burnin-its=20 chrom=", i
     )
     system(beagle_cmd_withGE)
   }

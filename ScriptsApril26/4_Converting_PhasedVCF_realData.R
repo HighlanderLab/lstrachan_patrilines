@@ -11,8 +11,8 @@
 rm(list=ls())
 
 args = commandArgs(trailingOnly=TRUE)
-workingDir = args[2]
-softwareDir = args[3]
+workingDir = args[1]
+softwareDir = args[2]
 pathToPlink <- softwareDir 
 pathToBeagle <- softwareDir
 
@@ -217,7 +217,7 @@ order_by_prefix_realData <- function(df) {
 #********* REAL DATA ******************
 print("Processing real data")
 setwd(paste0(workingDir, "/Real_data"))
-setwd("Beagle_phasing")
+setwd("Outputs/Beagle_phasing")
 
 #Phased with pedigree
 results_list <- list()
@@ -234,23 +234,23 @@ for (pedPhase in c("recPedigree", "matPedigree")) {
 
 setwd(paste0(workingDir, "/Real_data"))
 #Prephased file (used for comparison in the next script )
-vcf_file = "Slov_fM_QC_ACformat_sorted_biallelic_noDupPos.vcf.gz"
+vcf_file = "Data/Slov_fM_QC_ACformat_sorted_biallelic_noDupPos.vcf.gz"
 base <- sub("\\.vcf\\.gz$", "", vcf_file)
 plink_cmd <- paste0(pathToPlink, "/plink --vcf ", vcf_file, " --recode --double-id --allow-extra-chr --out ", base)
 system(plink_cmd)
-map_file = "Slov_fM_QC_ACformat_sorted_biallelic_noDupPos.map"
+map_file = "Data/Slov_fM_QC_ACformat_sorted_biallelic_noDupPos.map"
 Slov_prephased_haplotypes <- convert_VCF(vcf_file = vcf_file, map_file = map_file)
 
 
-Slov_PhasedHaplotypes_matPed <- Haplotype_using_pedigree_realData(pedigree_name = "Real_Data_pedigree.txt", haplo_name = "Slov_PhasedHaplotypes_matPedigree_AllChrs") #Slov_PhasedHaplotypes_NOPed
-Slov_PhasedHaplotypes_recPed <- Haplotype_using_pedigree_realData(pedigree_name = "AlphaAssign/Alpha_pedigree_Real.txt", haplo_name = "Slov_PhasedHaplotypes_recPedigree_AllChrs") #Slov_PhasedHaplotypes_WithPed
+real_data_pedigree = read.csv("Data/Real_Data_pedigree.csv", header = TRUE)
+write.table(real_data_pedigree, file = "Data/Real_Data_pedigree.txt", quote = FALSE, sep = " ", row.names = FALSE, col.names = FALSE)
+
+Slov_PhasedHaplotypes_matPed <- Haplotype_using_pedigree_realData(pedigree_name = "Data/Real_Data_pedigree.txt", haplo_name = "Slov_PhasedHaplotypes_matPedigree_AllChrs") #Slov_PhasedHaplotypes_NOPed
+Slov_PhasedHaplotypes_recPed <- Haplotype_using_pedigree_realData(pedigree_name = "Outputs/AlphaAssign/Alpha_pedigree_Real.txt", haplo_name = "Slov_PhasedHaplotypes_recPedigree_AllChrs") #Slov_PhasedHaplotypes_WithPed
 
 print("Saving data")
-system(paste0("rm ", workingDir, "Beagle_phasing/All_Phased_Haplotypes.RData"))
-save(list = c("Slov_PhasedHaplotypes_matPed", "Slov_PhasedHaplotypes_recPed",
-              "NoGE_SNP2k_PhasedHaplotypes_matPed", "WithGE_SNP2k_PhasedHaplotypes_matPed", "NoGE_SNP50k_PhasedHaplotypes_matPed", "WithGE_SNP50k_PhasedHaplotypes_matPed", 
-              "NoGE_SNP2k_PhasedHaplotypes_recPed", "WithGE_SNP2k_PhasedHaplotypes_recPed", "NoGE_SNP50k_PhasedHaplotypes_recPed", "WithGE_SNP50k_PhasedHaplotypes_recPed"),
-            file = "Beagle_phasing/All_Phased_Haplotypes.RData")
+save(list = c("Slov_PhasedHaplotypes_matPed", "Slov_PhasedHaplotypes_recPed"),
+ file = "Outputs/Beagle_phasing/All_Phased_Haplotypes.RData")
 
 
-save.image(file = "6_Converting_PhasedVCF.Rdata")
+save.image(file = "Pipeline/4_Converting_PhasedVCF.Rdata")

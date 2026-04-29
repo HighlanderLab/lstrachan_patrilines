@@ -12,8 +12,8 @@
 rm(list = ls()) #Lets clear workspace just incase something sneaks in
 
 args = commandArgs(trailingOnly=TRUE)
-workingDir = args[2]
-softwareDir = args[3]
+workingDir = args[1]
+softwareDir = args[2]
 pathToPlink <- softwareDir
 
 ped_to_raw <- function(ped_file, map_file, output_file) {
@@ -53,10 +53,10 @@ ped_to_raw <- function(ped_file, map_file, output_file) {
 ##############.  Prepping the input files ##################
 #rm(list = ls()) #Lets clear workspace just incase something sneaks in 
 
-setwd(workingDir)
-dir.create("Real_data/AlphaAssign", showWarnings = FALSE)
+setwd(paste0(workingDir, "/Real_data/"))
+dir.create("Data/AlphaAssign", showWarnings = FALSE)
 
-pedigree_file_real <- read.csv("Real_data/Real_Data_pedigree.csv")
+pedigree_file_real <- read.csv("Data/Real_Data_pedigree.csv")
 colnames(pedigree_file_real) <- c("id", "sire", "dam")
 
 removed_queen_id <- "B0003710" #Id of the queen removed during QC 
@@ -69,9 +69,9 @@ Alpha_pedigree_real <- data.frame(id = pedigree_file_real$id,
                              dam = pedigree_file_real$dam)
 
 
-write.table(Alpha_pedigree_real, file = "Real_data/AlphaAssign/Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_real, file = "Data/AlphaAssign/Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
-SNP_samples <- read.csv("Real_data/SNP_samples_2022.csv", header= T)
+SNP_samples <- read.csv("Data/SNP_samples_2022.csv", header= T)
 workers_IDs_beforeQC <- SNP_samples$snp_id[SNP_samples$biotype == "worker"]
 SNP_samples <- SNP_samples[SNP_samples$biotype == "dpc", ]
 SNP_samples <- SNP_samples$snp_id
@@ -86,26 +86,27 @@ Potential_fathers <- data.frame(
   Dpc4 = rep(SNP_samples[4], n),
   Dpc5 = rep(SNP_samples[5], n)
 )
-write.table(Potential_fathers, file = "Real_data/AlphaAssign/PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
+write.table(Potential_fathers, file = "Data/AlphaAssign/PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
 
 
 #Recode quality controlled files for AlphaAssign
-ped_to_raw(ped_file = "Real_data/Slov_fM_QC.ped", map_file = "Real_data/Slov_fM_QC.map", output_file = "Real_data/Slov_fM_QC.raw")
+ped_to_raw(ped_file = "Data/Slov_fM_QC.ped", map_file = "Data/Slov_fM_QC.map", output_file = "Data/Slov_fM_QC.raw")
 
 #Process the genotypes
-AlphaPed <- read.table("Real_data/Slov_fM_QC.raw", header=TRUE)
+AlphaPed <- read.table("Data/Slov_fM_QC.raw", header=TRUE)
 AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
 AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
 
-write.table(AlphaGeno_id, file=paste0("Real_data/AlphaAssign/AlphaGeno_RealData.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+write.table(AlphaGeno_id, file=paste0("Data/AlphaAssign/AlphaGeno_RealData.txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE)
 
 ############### Running AlphAssign in terminal################
-setwd(workingDir)
+
 #create a for loop here for all of the SNP array sizes <-------------- 
-system(paste0("bash ", workingDir, "/ScriptsApril26/RunAlphaAssign_RealData.sh AlphaGeno_RealData ", workingDir, "/Real_data/AlphaAssign ", workingDir, "/Real_data/AlphaAssign"))
+dir.create("Outputs/AlphaAssign", showWarnings = FALSE)
+system(paste0("bash ", workingDir, "/ScriptsApril26/RunAlphaAssign_RealData.sh AlphaGeno_RealData ", workingDir, "/Real_data/Data/AlphaAssign ", workingDir, "/Real_data/Outputs/AlphaAssign"))
 
 #Summarise the dataset     
-Alpha_output <- read.table("Real_data/AlphaAssign/AlphaGeno_RealData.sires", header = TRUE)
+Alpha_output <- read.table("Outputs/AlphaAssign/AlphaGeno_RealData.sires", header = TRUE)
 
 Sires_assigned <- Alpha_output[Alpha_output$chosen == 1, ]
 nSires_assigned <- nrow(Sires_assigned)
@@ -130,7 +131,7 @@ Real_Alpha_df <- data.frame(
   Software = "AlphaAssign")
 
 
-write.table(Real_Alpha_df, file = paste0(workingDir, "/Real_data/AlphaAssign/Alpha_summary.txt"), sep = " ", quote = F, col.names = T, row.names = F)
+write.table(Real_Alpha_df, file = paste0(workingDir, "/Real_data/Outputs/AlphaAssign/Alpha_summary.txt"), sep = " ", quote = F, col.names = T, row.names = F)
 
 ##################################################
 # Update the pedigree
@@ -139,6 +140,6 @@ idx <- match(Alpha_pedigree_real$id, Offspring_and_candidateParent$id)
 # Replace only where sire == 0 and a match exists
 update_sires <- Alpha_pedigree_real$sire == 0 & !is.na(idx)
 Alpha_pedigree_real$sire[update_sires] <- Offspring_and_candidateParent$sire[idx[update_sires]]
-write.table(Alpha_pedigree_real, file = "Real_data/AlphaAssign/Alpha_pedigree_Real.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Alpha_pedigree_real, file = "Outputs/AlphaAssign/Alpha_pedigree_Real.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
-save.image(file = paste0(workingDir, "/Real_data/4_AlphaAssign.Rdata"))
+save.image(file = paste0(workingDir, "/Real_data/Pipeline/2_AlphaAssign.Rdata"))
