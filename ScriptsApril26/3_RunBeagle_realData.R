@@ -133,3 +133,4 @@ for (f in vcf_gz) {
 }
 
 
+save.image(file = paste0(workingDir, "/Real_data/Pipeline/3_Beagle.Rdata"))

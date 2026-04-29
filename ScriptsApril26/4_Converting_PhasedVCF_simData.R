@@ -270,4 +270,4 @@ WithGE_SNP50k_PhasedHaplotypes_recPed <- Haplotype_using_pedigree(GenErr = "With
 
 
 
-save.image(file = paste0(repDir, "/Pipeline/6_Converting_PhasedVCF.Rdata"))
+save.image(file = paste0(repDir, "/Pipeline/4_Converting_PhasedVCF.Rdata"))

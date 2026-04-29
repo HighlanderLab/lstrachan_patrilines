@@ -316,4 +316,4 @@ meanRel_queen = inbreeding %>%
 inbreeding$PopGen <- paste0(inbreeding$Pop, inbreeding$Gen)
 meanRel_queen$PopGen <- paste0(meanRel_queen$Pop, meanRel_queen$Gen)
 
-save.image(file = "Pipeline/2_FounderPop_inbred.RData")
+save.image(file = "Pipeline/0_FounderPop_inbred.RData")

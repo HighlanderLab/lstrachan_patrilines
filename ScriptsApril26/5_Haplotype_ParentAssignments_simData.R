@@ -1301,7 +1301,7 @@ names(Rec_pedigree_50k_WithGE) <- cols
 
 #Get haplotypes made in 6_Converting_PhasedVCF scripts
 setwd(repDir)
-load("Pipeline/6_Converting_PhasedVCF.Rdata")
+load("Pipeline/4_Converting_PhasedVCF.Rdata")
 
 NoGE_map_2k <- read.table("Data/Sim_NoGE/SNP_4_NoGE_QC_ACformat.map")
 WithGE_map_2k <- read.table("Data/Sim_WithGE/SNP_4_WithGE_QC_ACformat.map")
@@ -1413,5 +1413,5 @@ save(Route2_NoGE_SNP2k, Route2_WithGE_SNP2k, Route2_NoGE_SNP50k, Route2_WithGE_S
 
 
 print("Saving data")
-save.image(paste0(repDir, "/Pipeline/7_Haplotype_ParentAssignments.RData"))
+save.image(paste0(repDir, "/Pipeline/5_Haplotype_ParentAssignments.RData"))
 

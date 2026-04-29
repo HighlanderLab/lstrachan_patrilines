@@ -32,7 +32,7 @@ nSNP_array <- rbind(c(3125, 5L), c(108, 4L), c(50, 3L), c(10, 2L), c(1,1L))
 pathToPlink=softwareDir
 #workingDir = "/home/jana/github/lstrachan_patrilines/"
 #setwd(workingDir)
-load("Pipeline/2_FounderPop_inbred.RData")
+load("Pipeline/0_FounderPop_inbred.RData")
 
 matingStation_drones <- createDrones(DPQs, nInd = nDronesPerQueen)
 
@@ -319,4 +319,4 @@ for (n in 1:nrow(nSNP_array)){
 }
   
 
-save.image(file = paste0(repDir, "/Pipeline/3_SimulatedData_prepared.Rdata"))
+save.image(file = paste0(repDir, "/Pipeline/1_SimulatedData_prepared.Rdata"))

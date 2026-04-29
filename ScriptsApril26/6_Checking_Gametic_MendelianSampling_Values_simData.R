@@ -26,6 +26,20 @@
 #**••• Functions and library  •••**
 ############################################################################################################
 
+rm(list = ls())
+
+args = commandArgs(trailingOnly=TRUE)
+Rep = args[1]
+workingDir = args[2]
+softwareDir = args[3]
+pathToPlink <- softwareDir
+pathToBeagle <- softwareDir
+
+repDir = paste0(workingDir, "/SimRep", Rep, "/")
+
+# Set working directory
+setwd(repDir)
+
 library(ggplot2)
 library(gridExtra)
 library(cowplot) 
@@ -299,33 +313,16 @@ calculate_gametic_relatedness_R2 <- function(sorted_offspring_haplotypes, all_ha
 }
 
 
-workingDir = "~/Desktop/lstrachan_patrilines"
-workingDir = "/home/jana/github/lstrachan_patrilines"
-setwd(workingDir)
-
 ############################################################################################################
 #**••• Get the file we need to run •••**
 ############################################################################################################
 
 #LOAD Rdata from script 7_Haplotype_ParentAssignments
-setwd(workingDir)
-load("Data/Pipeline/7_Haplotype_ParentAssignments.Rdata")
+
+print("Loading RData file from 5_Haplotype_ParentAssignments.RData...")
+load("Pipeline/5_Haplotype_ParentAssignments.RData")
 #Needs to contain the mat and rec pedigrees (including the filtered ones), true haplotypes, map files, and the assigned haplotypes for Route1 and Route2. 
-
-#--- Real Pedigrees --- 
-
-# Pedigree prior to ped reconstruction
-colnames(Slov_pedigree_mat) <- c("id","dpc","mother")
-colnames(Slov_pedigree_mat_filtered) <- c("id", "dpc", "mother")
-
-#Pedigree After reconstruction
-colnames(Slov_pedigree_rec) <- c("id","dpc","mother")
-colnames(Slov_pedigree_rec_filter) <- c("id", "dpc", "mother")
-
-# --- Real assigned haplotypes from 7_Haplotype_ParentAssignments script 
-#Route1_Real
-#Route2_Real
-
+print("RData file loaded successfully.")
 
 # --- Simulated Pedigrees ---
 #Pedigree prior to reconstruction 
@@ -341,19 +338,6 @@ colnames(Rec_pedigree_2k_NoGE_filtered) <- c("id", "dpc", "mother")
 colnames(Rec_pedigree_2k_WithGE_filtered) <- c("id", "dpc", "mother")
 colnames(Rec_pedigree_50k_NoGE_filtered) <- c("id", "dpc", "mother")
 colnames(Rec_pedigree_50k_WithGE_filtered) <- c("id", "dpc", "mother")
-
-# --- Simulated assigned haplotypes from 7_Haplotype_ParentAssignments script: 
-# Route1_SimTrue 
-# Route1_NoGE_SNP2k 
-# Route1_WithGE_SNP2k
-# Route1_NoGE_SNP50k 
-# Route1_WithGE_SNP50k 
-# 
-# Route2_SimTrue 
-# Route2_NoGE_SNP2k 
-# Route2_WithGE_SNP2k 
-# Route2_NoGE_SNP50k 
-# Route2_WithGE_SNP50k
 
 ############################################################################################################
 #**••• Route 1 - with reconstructed pedigree and both parents info •••**
@@ -374,77 +358,80 @@ true_haplotypes_filtered <- true_haplotypes[true_haplo_ids %in% unique_target_id
 dim(true_haplotypes_filtered)
 
 
-
+print("Analysis for route 1")
 #** SIMULATED **|
+print("True haplotypes")
 colnames(Route1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
 Route1_Gametic_True <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Route1_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes, pedigree = Worker_pedigree) 
 Route1_Gametic_True$Phasing <- "True"
 
+print("2K NoGE")
 Route1_Gametic_NoGE_phased_SNP2k <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Route1_NoGE_SNP2k$results_flipped, all_haplotypes = NoGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_2k_NoGE_filtered)
 Route1_Gametic_NoGE_phased_SNP2k$Phasing <- "Phased_NoGE_2k"
 
+print("2K WithGE")
 Route1_Gametic_WithGE_phased_SNP2k <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Route1_WithGE_SNP2k$results_flipped, all_haplotypes = WithGE_SNP2k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_2k_WithGE_filtered)
 Route1_Gametic_WithGE_phased_SNP2k$Phasing <- "Phased_WithGE_2k"
 
+print("50K NoGE")
 Route1_Gametic_NoGE_phased_SNP50k <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Route1_NoGE_SNP50k$results_flipped, all_haplotypes = NoGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_50k_NoGE_filtered)
 Route1_Gametic_NoGE_phased_SNP50k$Phasing <- "Phased_NoGE_50k"
 
+print("50K WithGE")
 Route1_Gametic_WithGE_phased_SNP50k <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Route1_WithGE_SNP50k$results_flipped, all_haplotypes = WithGE_SNP50k_PhasedHaplotypes_recPed, pedigree = Rec_pedigree_50k_WithGE_filtered)
 Route1_Gametic_WithGE_phased_SNP50k$Phasing <- "Phased_WithGE_50k"
 
 
 Route1_Mendelian_sim_df <- rbind(Route1_Gametic_True, Route1_Gametic_NoGE_phased_SNP2k, Route1_Gametic_WithGE_phased_SNP2k, Route1_Gametic_NoGE_phased_SNP50k, Route1_Gametic_WithGE_phased_SNP50k)
+
+dir.create("Outputs/MendelianSampling")
+print("Saving Route 1 Mendelian sampling values for simulated data")
 save(Route1_Mendelian_sim_df, file = "Outputs/MendelianSampling/Route1_Mend_Sim.Rdata")
 
-#** REAL DATA **|
-Route1_Gametic_Slov <- calculate_gametic_relatedness_R1(sorted_offspring_haplotypes = Route1_Real$results_flipped, all_haplotypes = Slov_PhasedHaplotypes_recPed, pedigree = Slov_pedigree_rec_filter)
-Route1_Gametic_Slov$Phasing <- "Real"
-
-
+print("Plotting for route 1")
 #•• Plotting ••
 Plotting_Gametic_R1(df = Route1_Mendelian_sim_df, phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
-Plotting_Gametic_R1(df = Route1_Gametic_Slov, phased_type = c("Real"), plotting_styles = "density")
-Route1_plot <- Plotting_Gametic_R1(df = rbind(Route1_Mendelian_sim_df, Route1_Gametic_Slov), phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k", "Real"), plotting_styles = "density")
+Route1_plot <- Plotting_Gametic_R1(df = rbind(Route1_Mendelian_sim_df), phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = "density")
 
-setwd(workingDir)
-dir.create("Outputs/MendelianSampling")
-ggsave(plot = Route1_plot, filename = "Outputs/MendelianSampling/Route1_test.png", width = 25, height = 10) #Something weird here - need to fix 
+ggsave(plot = Route1_plot, filename = "Outputs/MendelianSampling/Route1.png", width = 25, height = 10) 
 
 ############################################################################################################
 #**••• Route 2 - with maternal pedigree and maternal info only •••**
 ############################################################################################################
 
+print("Analysis for route 2")
 #** SIMULATED **
+print("True haplotypes")
 colnames(Route2_SimTrue$real_results_flipped) <- colnames(true_haplotypes)#[1:3200]
 Route2_Gametic_TRUE <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_SimTrue$real_results_flipped , all_haplotypes = true_haplotypes, pedigree = Worker_pedigree) # use true_haplotypes [,1:3200] if using the 1 chromosome version 
 Route2_Gametic_TRUE$Phasing <- "True"
 
+print("2K NoGE")
 Route2_Gametic_NoGE_phased_2k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_NoGE_SNP2k$phased_results_flipped, all_haplotypes = NoGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_NoGE_phased_2k$Phasing <- "Phased_NoGE_2k"
 
+print("2K WithGE")
 Route2_Gametic_WithGE_phased_2k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_WithGE_SNP2k$phased_results_flipped, all_haplotypes = WithGE_SNP2k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_WithGE_phased_2k$Phasing <- "Phased_WithGE_2k"
 
+print("50K NoGE")
 Route2_Gametic_NoGE_phased_50k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_NoGE_SNP50k$phased_results_flipped, all_haplotypes = NoGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_NoGE_phased_50k$Phasing <- "Phased_NoGE_50k"
 
+print("50K WithGE")
 Route2_Gametic_WithGE_phased_50k <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_WithGE_SNP50k$phased_results_flipped, all_haplotypes = WithGE_SNP50k_PhasedHaplotypes_matPed, pedigree = Worker_pedigree)
 Route2_Gametic_WithGE_phased_50k$Phasing <- "Phased_WithGE_50k"
 
 
 Route2_Mendelian_sim_df <- rbind(Route2_Gametic_TRUE, Route2_Gametic_NoGE_phased_2k, Route2_Gametic_WithGE_phased_2k, Route2_Gametic_NoGE_phased_50k, Route2_Gametic_WithGE_phased_50k)
 
-
-#** REAL DATA **
-Route2_Gametic_Slov <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_Real$phased_results_flipped, all_haplotypes = Slov_PhasedHaplotypes_matPed, pedigree = Slov_pedigree_mat_filtered)
-Route2_Gametic_Slov$Phasing <- "Real"
-
-#•• Plotting ••
-Plotting_Gametic_R2(df = Route2_Mendelian_sim_df, phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
-Plotting_Gametic_R2(df = Route2_Gametic_Slov, phased_type = c("Real"), plotting_styles = c("density"))
-Route2_plot <- Plotting_Gametic_R2(df = rbind(Route2_Mendelian_sim_df, Route2_Gametic_Slov), phased_type = c("True","Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k", "Real"), plotting_styles = c("density"))
-
+print("Saving Route 2 Mendelian sampling values for simulated data")
 save(Route2_Mendelian_sim_df, file = "Outputs/MendelianSampling/Route2_Mend_Sim.Rdata")
 
+print("Plotting for route 2")
+#•• Plotting ••
+Plotting_Gametic_R2(df = Route2_Mendelian_sim_df, phased_type = c("True", "Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
+Route2_plot <- Plotting_Gametic_R2(df = rbind(Route2_Mendelian_sim_df), phased_type = c("True","Phased_NoGE_2k", "Phased_WithGE_2k", "Phased_NoGE_50k", "Phased_WithGE_50k"), plotting_styles = c("density"))
 
-save.image(file = paste0(workingDir, "/Data/Pipeline/8_Checking_Gametic_MendelianSampling.Rdata"))
+
+save.image(file = "Pipeline/6_Checking_Gametic_MendelianSampling.Rdata")

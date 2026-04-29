@@ -161,5 +161,5 @@ for (f in vcf_gz) {
 }
 
 
-save.image(file = paste0(repDir, "/Pipeline/5_Beagle.Rdata"))
+save.image(file = paste0(repDir, "/Pipeline/3_Beagle.Rdata"))
   

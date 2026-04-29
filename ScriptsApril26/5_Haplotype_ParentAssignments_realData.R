@@ -1309,4 +1309,4 @@ print("Route2")
 Route2_Real <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = Slov_pedigree_mat_filtered, method = "power_mean", Data_type = "Real_Slov_data")
 
 print("Saving data")
-save.image("Pipeline/7_Haplotype_ParentAssignments.RData")
+save.image("Pipeline/5_Haplotype_ParentAssignments.RData")
