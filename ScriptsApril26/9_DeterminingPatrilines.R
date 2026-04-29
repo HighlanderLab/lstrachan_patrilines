@@ -15,7 +15,7 @@
 ################################################################################
 #******* Route 1 Functions *******************************
 
-calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father_haplotypes, father_test_threshold) {
+calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father_haplotypes, father_test_threshold, recon_pedigree,data_type= NULL, haplo_assignment_type= NULL) {
   
   # Extract paternal haplotypes
   results_paternal <- rownames(results)[grep(paste0("_paternal"), rownames(results))]
@@ -26,25 +26,44 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
   
   # Initialize a data frame to store the results
   nPaternity <- data.frame(queen_id = queen_ids, 
+                           num_dpqs_actual = rep(0, length(queen_ids)),
+                           num_dpqs_recon_ped = rep(0, length(queen_ids)),
                            num_fathers_actual = rep(0, length(queen_ids)),
-                           num_workers = rep(0, length(queen_ids)),
+                           num_workers_actual = rep(0, length(queen_ids)),
+                           num_workers_recon = rep(0, length(queen_ids)),
                            num_fathers_estimated = rep(0, length(queen_ids)),
                            num_fathers_correct = rep(0, length(queen_ids)),
                            father_accuracy_threshold = father_test_threshold,
                            sister_threshold = sister_threshold,
+                           data_type = data_type,
+                           haplo_assignment_type = haplo_assignment_type,
                            stringsAsFactors = FALSE)
   
   for (i in 1:length(queen_ids)) {
     print(i)
     queen_id <- queen_ids[i]
     sister_worker_ids <- t(pedigree[pedigree$mother == queen_id, "id"])
+    nPaternity$num_workers_actual[i]  <- nrow(pedigree[pedigree$mother == queen_id, "id"])
+    num_dpqs_actual <- pedigree[pedigree$mother == queen_id,]
+    
+    nPaternity$num_dpqs_actual[i] <- length(unique(num_dpqs_actual$dpc))
+    
+    # Check if recon_pedigree is missing, null, or the string "NA"
+    if (is.null(recon_pedigree) || (length(recon_pedigree) == 1 && is.na(recon_pedigree))) {
+      nPaternity$num_dpqs_recon_ped[i] <- NA
+      nPaternity$num_workers_recon[i] <- NA
+    } else {
+      # It is a dataframe, proceed with filtering
+      matches <- recon_pedigree[recon_pedigree$mother == queen_id, ]
+      nPaternity$num_dpqs_recon_ped[i] <- length(unique(matches$dpc))
+      nPaternity$num_workers_recon[i] <- length(unique(matches$id))
+    }
     
     # Pull out the results_paternal with the worker IDs
     pattern <- paste0("^(", paste(sister_worker_ids, collapse = "|"), ")_paternal$")
     matching_indices <- grep(pattern, rownames(results_paternal))
     sister_paternal <- results_paternal[matching_indices, , drop = FALSE]
-    
-    nPaternity$num_workers[i] <- nrow(sister_paternal)
+  
     
     # Pull out the father IDs for this queen from the pedigree
     father_ids <- t(unique(pedigree[pedigree$mother == queen_id, "father"]))
@@ -183,64 +202,41 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
   
   return(nPaternity)
 }
-# Explanation of `calc_nPaternity_Accuracy()`:
-{
-# 1. Extract paternal haplotypes for all workers.
-# 2. Loop through each queen (colony mother) to group her offspring.
-# 3. For each queen:
-#     - Compare worker haplotypes to true father haplotypes using a similarity threshold.
-#     - Build a similarity matrix between all workers and fathers.
-#     - Assign workers to father groups if similarity exceeds threshold.
-#     - For unassigned workers, check if they resemble any assigned sisters.
-#     - Still unmatched workers are compared with each other to form new groups.
-#     - Remaining unmatched individuals are placed in their own group.
-# 4. Count and store:
-#     - Actual number of fathers
-#     - Estimated number of fathers from grouping
-#     - Number of correctly identified fathers
-}
 
-run_paternity_tests <- function(results_arg, sister_thresholds, father_test_thresholds, father_haplotypes) {
+run_paternity_tests <- function(results_arg, sister_thresholds, father_test_thresholds, father_haplotypes, pedigree, recon_pedigree, data_type= NULL, haplo_assignment_type= NULL) {
   
-  # Initialize a list to store the results
   results_list <- list()
   
-  # Loop over each combination of sister_threshold and father_test_threshold
   for (sister_threshold in sister_thresholds) {
     for (father_test_threshold in father_test_thresholds) {
       
-      # Create a descriptive name for the result
       result_name <- paste0("sis", sister_threshold, "_fat", father_test_threshold)
+      print(paste("Running:", result_name))
       
-      # Print to ensure thresholds are being passed correctly
-      print(paste("Running for sister_threshold:", sister_threshold, "and father_test_threshold:", father_test_threshold))
+      # Wrap the core logic in tryCatch to prevent crashing
+      result <- tryCatch({
+        calc_nPaternity_Accuracy(
+          results = results_arg,
+          sister_threshold = sister_threshold,
+          pedigree = pedigree,
+          recon_pedigree = recon_pedigree,
+          father_haplotypes = father_haplotypes,
+          father_test_threshold = father_test_threshold,
+          data_type = data_type,
+          haplo_assignment_type = haplo_assignment_type
+          )
+      }, error = function(e) {
+        # This code runs only if an error (like 'stop') occurs
+        message(paste("!!! Error in", result_name, ":", e$message))
+        return(paste("FAILED:", e$message)) # Return a string instead of a dataframe
+      })
       
-      # Run the function separately for each combination of thresholds
-      result <- calc_nPaternity_Accuracy(
-        results = results_arg,  # Pass the dynamic results argument here
-        sister_threshold = sister_threshold,  # sister threshold
-        pedigree = pedigree,
-        father_haplotypes = father_haplotypes,
-        father_test_threshold = father_test_threshold  # father test threshold
-      )
-      
-      # Store the result with the unique name
       results_list[[result_name]] <- result
-      
-      # Print to confirm each result has been stored
-      print(paste("Finished:", result_name))
+      print(paste("Completed:", result_name))
     }
   }
   
-  # Return the list of results
   return(results_list)
-}
-# Explanantion of `run_paternity_tests()`:
-{
-# - Accepts a matrix of paternal haplotypes (`results_arg`), a list of `sister_thresholds`, 
-#   and a list of `father_test_thresholds`.
-# - For each combination of thresholds, runs `calc_nPaternity_Accuracy()`.
-# - Stores results in a named list (`results_list`) for downstream analysis.
 }
 
 plot_paternity_number_grid_DRONES <- function(Results) {
@@ -319,7 +315,7 @@ plot_paternity_number_grid_DRONES <- function(Results) {
 ################################################################################
 #******* Route 2 Functions *******************************
 
-SisterONLY_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, simulated = NULL) {
+SisterONLY_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, recon_pedigree, simulated = NULL, data_type= NULL, haplo_assignment_type= NULL) {
   
   # Extract paternal haplotypes (still named '_paternal' in the results)
   results_paternal <- rownames(results)[grep(paste0("_paternal"), rownames(results))]
@@ -331,38 +327,62 @@ SisterONLY_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedig
   # Initialize a data frame to store the results
   if(simulated == TRUE){
     nPaternity <- data.frame(queen_id = queen_ids, 
-                             num_workers = rep(0, length(queen_ids)),
+                             num_dpqs_actual = rep(0, length(queen_ids)),
+                             num_dpqs_recon_ped = rep(0, length(queen_ids)),
+                             num_workers_actual = rep(0, length(queen_ids)),
+                             num_workers_recon = rep(0, length(queen_ids)),
                              num_sister_groups_estimated = rep(0, length(queen_ids)),
                              stringsAsFactors = FALSE,
                              sister_threshold = sister_threshold,
-                             actual_number_fathers = rep(0, length(queen_ids)))
+                             actual_number_fathers = rep(0, length(queen_ids)),
+                             data_type = data_type,
+                             haplo_assignment_type = haplo_assignment_type)
   }
-  else if(simulated == FALSE){
+  if(simulated == FALSE){
     nPaternity <- data.frame(queen_id = queen_ids, 
-                             num_workers = rep(0, length(queen_ids)),
+                             num_dpqs_recon_ped = rep(0, length(queen_ids)),
+                             num_workers_actual = rep(0, length(queen_ids)),
+                             num_workers_recon = rep(0, length(queen_ids)),
                              num_sister_groups_estimated = rep(0, length(queen_ids)),
                              stringsAsFactors = FALSE,
-                             sister_threshold = sister_threshold)
+                             sister_threshold = sister_threshold,
+                             data_type = data_type,
+                             haplo_assignment_type = haplo_assignment_type)
   }
   
   for (i in 1:length(queen_ids)) {
     print(i)
     queen_id <- queen_ids[i]
     sister_worker_ids <- t(pedigree[pedigree$mother == queen_id, "id"])
+    if (simulated == TRUE){
+      nPaternity$num_workers_actual[i]  <- nrow(pedigree[pedigree$mother == queen_id, "id"])    
+      }
+    if (simulated == FALSE){
+    nPaternity$num_workers_actual[i]  <- length(sister_worker_ids)
+     }
     
     if(simulated == TRUE){
       queen_group <- pedigree[pedigree$mother == queen_id,]
       father_ids <- t(unique(pedigree[pedigree$mother == queen_id, "father"]))
       nPaternity$actual_number_fathers[i] <- length(father_ids)
+      nPaternity$num_dpqs_actual[i] <- length(unique(queen_group$dpc))
+    }
+    
+    # Check if recon_pedigree is missing, null, or the string "NA"
+    if (is.null(recon_pedigree) || (length(recon_pedigree) == 1 && is.na(recon_pedigree))) {
+      nPaternity$num_dpqs_recon_ped[i] <- NA
+      nPaternity$num_workers_recon[i] <- NA
+    } else {
+      # It is a dataframe, proceed with filtering
+      matches <- recon_pedigree[recon_pedigree$mother == queen_id, ]
+      nPaternity$num_dpqs_recon_ped[i] <- length(unique(matches$dpc))
+      nPaternity$num_workers_recon[i] <- length(unique(matches$id))
     }
     
     # Pull out the results_paternal with the worker IDs
     pattern <- paste0("^(", paste(sister_worker_ids, collapse = "|"), ")_paternal$")
     matching_indices <- grep(pattern, rownames(results_paternal))
     sister_paternal <- results_paternal[matching_indices, , drop = FALSE]
-    
-    # Store the number of workers for this queen
-    nPaternity$num_workers[i] <- nrow(sister_paternal)
     
     # Ensure we have data to work with
     if (nrow(sister_paternal) == 0) {
@@ -425,25 +445,8 @@ SisterONLY_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedig
   
   return(nPaternity)
 }
-# Explanation `sisterONLY_calc_nPaternity_Accuracy()`:
-{
-# 1. Extract paternal haplotypes for all workers.
-# 2. Loop through each queen (colony mother) to group her offspring.
-# 3. For each queen:
-#     - (If simulated) record the true number of fathers from the pedigree.
-#     - Subset worker paternal haplotypes belonging to that queen.
-#     - Compute pairwise similarity between all worker haplotypes.
-#     - Group workers into sister clusters if similarity exceeds the sister threshold.
-#         * Workers are merged into existing groups if they match any group member.
-#         * Otherwise, new groups are created.
-#     - Assign any remaining unmatched workers to their own singleton groups.
-# 4. Count and store:
-#     - Number of workers
-#     - Estimated number of sister groups (clusters)
-#     - (If simulated) actual number of fathers
-}
 
-run_sister_clustering_tests <- function(results_arg, sister_thresholds, pedigree, simulated = NULL) {
+run_sister_clustering_tests <- function(results_arg, sister_thresholds, pedigree, recon_pedigree, simulated = NULL, data_type= NULL, haplo_assignment_type= NULL) {
   
   # Initialize a list to store the results
   results_list <- list()
@@ -458,13 +461,21 @@ run_sister_clustering_tests <- function(results_arg, sister_thresholds, pedigree
     print(paste("Running for sister_threshold:", sister_threshold))
     
     # Run the function for each sister_threshold
-    result <- SisterONLY_calc_nPaternity_Accuracy(
+    result <- tryCatch({
+      SisterONLY_calc_nPaternity_Accuracy(
       results = results_arg,      # Pass the dynamic results argument here
-      sister_threshold = sister_threshold,  # sister threshold
+      sister_threshold = sister_thresholds,  # sister threshold
       pedigree = pedigree,# Pass the pedigree information
-      simulated = simulated
+      recon_pedigree = recon_pedigree, #Pass on reconstructed pedigree info
+      simulated = simulated,
+      data_type= data_type, 
+      haplo_assignment_type= haplo_assignment_type
     )
-    
+    }, error = function(e) {
+      # This code runs only if an error (like 'stop') occurs
+      message(paste("!!! Error in", result_name, ":", e$message))
+      return(paste("FAILED:", e$message)) # Return a string instead of a dataframe
+    })
     # Store the result with the unique name
     results_list[[result_name]] <- result
     
@@ -474,22 +485,6 @@ run_sister_clustering_tests <- function(results_arg, sister_thresholds, pedigree
   
   # Return the list of results
   return(results_list)
-}
-# Explanation of `run_sister_clustering_tests()`:
-{
-# 1. Initialize an empty list to store results.
-# 2. Loop through each provided sister similarity threshold.
-# 3. For each threshold:
-#     - Create a unique name for the result (e.g., "sis0.8").
-#     - Print progress to track execution.
-#     - Run `SisterONLY_calc_nPaternity_Accuracy()` using:
-#         * The input results data
-#         * Current sister threshold
-#         * Pedigree information
-#         * Optional simulation flag
-#     - Store the output in the results list under the unique name.
-#     - Print confirmation after completion.
-# 4. Return the full list of results across all thresholds.
 }
 
 plot_paternity_number_grid_SISTERONLY <- function(...) {
@@ -566,6 +561,9 @@ workingDir <- "/home/jana/github/lstrachan_patrilines/"
 workingDir = "~/Desktop/lstrachan_patrilines"
 setwd(workingDir)
 
+#Load the outputs of 7_Haplotype_ParentageAssignments script
+load("Data/Pipeline/7_Haplotype_ParentAssignments.Rdata")
+
 #••••• Simulated ••••• Can't do this with Real data since we don't have the father/drone info 
 
 #Load your Pop object that contains the fathers and the pedigree with the fathers id in there 
@@ -573,7 +571,6 @@ Sim_pedigree_mat <- read.csv("Data/worker_pedigree.csv")
 fathers_id_all <- Sim_pedigree_mat$father
 father_id_1 <- paste(fathers_id_all, "1", sep = "_")
 
-Simulated_pop <- load("Data/Pop_withFathers.Rdata")
 true_haplotypes <- pullSnpHaplo(PopMerged)
 
 #since they're coded as identical diploids we can just use one of them
@@ -587,42 +584,117 @@ father_id_paternal <- paste(father_id_paternal, "paternal", sep = "_")
 father_haplotype_pat <- father_haplotypes_1
 rownames(father_haplotype_pat) <- father_id_paternal
 
-#Load the outputs of 7_Haplotype_ParentageAssignments script
-# --- Simulated assigned haplotypes from 7_Haplotype_ParentAssignments script 
-
-# Load Rdata from the #7 script <---------------------------------------------------LOOK HERE
-Haplo_R1_SimTrue <-  Route1_SimTrue
-Haplo_R1_NoGE_SNP2k <-  Route1_NoGE_SNP2k
-Haplo_R1_WithGE_SNP2k <-  Route1_WithGE_SNP2k
-Haplo_R1_NoGE_SNP50k <-  Route1_NoGE_SNP50k
-Haplo_R1_WithGE_SNP50k <-  Route1_WithGE_SNP50k
-
-
 # Define the thresholds you want to test (takes a good while to run)
 sister_thresholds <- c(1.0, 0.95, 0.90, 0.85, 0.80, 0.75)
-father_test_thresholds <- c(0.9,0.95, 1)
+father_test_thresholds <- c(1,0.95, 0.9)
 
 #Run 2 things: 
 #1. Run with haplotypes that have gone through route1 of haplotype parental assignment
 #2. Run with haplotypes that have gone through route2 of haplotype parental assignment 
 
 # Haplotypes route 1 : with recon pedigree and both parents 
-PatR1_SimTrue_Haplo1 <- run_paternity_tests(results_arg = Haplo_R1_SimTrue$real_results_flipped,
+PatR1_SimTrue_Haplo1 <- run_paternity_tests(results_arg = Route1_SimTrue$real_results_flipped,
+                                               sister_thresholds = sister_thresholds,
+                                               father_test_thresholds = father_test_thresholds,
+                                               pedigree = Sim_pedigree_mat,
+                                               recon_pedigree = NULL,
+                                               father_haplotypes = father_haplotype_pat,
+                                            data_type = "True",
+                                            haplo_assignment_type = "Used recon pedigree")
+
+
+PatR1_NoGE_SNP2k_Haplo1 <- run_paternity_tests(results_arg = Route1_NoGE_SNP2k$results_flipped,
                                      sister_thresholds = sister_thresholds,
                                      father_test_thresholds = father_test_thresholds,
-                                     father_haplotypes = father_haplotype_pat)
+                                     pedigree = Sim_pedigree_mat,
+                                     recon_pedigree = Rec_pedigree_2k_NoGE_filtered,
+                                     father_haplotypes = father_haplotype_pat,
+                                     data_type = "NoGE_2k",
+                                     haplo_assignment_type = "Used recon pedigree")
+
+
+PatR1_NoGE_SNP50k_Haplo1 <- run_paternity_tests(results_arg = Route1_NoGE_SNP50k$results_flipped,
+                                               sister_thresholds = sister_thresholds,
+                                               father_test_thresholds = father_test_thresholds,
+                                               pedigree = Sim_pedigree_mat,
+                                               recon_pedigree = Rec_pedigree_50k_NoGE_filtered,
+                                               father_haplotypes = father_haplotype_pat,
+                                               data_type = "NoGE_50k",
+                                               haplo_assignment_type = "Used recon pedigree")
+
+PatR1_WithGE_SNP2k_Haplo1 <- run_paternity_tests(results_arg = Route1_WithGE_SNP2k$results_flipped,
+                                               sister_thresholds = sister_thresholds,
+                                               father_test_thresholds = father_test_thresholds,
+                                               pedigree = Sim_pedigree_mat,
+                                               recon_pedigree = Rec_pedigree_2k_WithGE_filtered,
+                                               father_haplotypes = father_haplotype_pat,
+                                               data_type = "WithGE_SNP2k",
+                                               haplo_assignment_type = "Used recon pedigree")
+
+
+PatR1_WithGE_SNP50k_Haplo1 <- run_paternity_tests(results_arg = Route1_WithGE_SNP50k$results_flipped,
+                                                sister_thresholds = sister_thresholds,
+                                                father_test_thresholds = father_test_thresholds,
+                                                pedigree = Sim_pedigree_mat,
+                                                recon_pedigree = Rec_pedigree_50k_WithGE_filtered,
+                                                father_haplotypes = father_haplotype_pat,
+                                                data_type = "WithGE_50k",
+                                                haplo_assignment_type = "Used recon pedigree")
 
 # Haplotypes route 2 : with maternal pedigree and only maternal info 
-PatR1_SimTrue_Haplo2 <- run_paternity_tests(results_arg = Haplo_R2_SimTrue$real_results_flipped,
-                                     sister_thresholds = sister_thresholds,
-                                     father_test_thresholds = father_test_thresholds,
-                                     father_haplotypes = father_haplotype_pat)
+PatR1_SimTrue_Haplo2 <- run_paternity_tests(results_arg = Route2_SimTrue$real_results_flipped,
+                                            sister_thresholds = sister_thresholds,
+                                            father_test_thresholds = father_test_thresholds,
+                                            pedigree = Sim_pedigree_mat,
+                                            recon_pedigree = NULL,
+                                            father_haplotypes = father_haplotype_pat,
+                                            data_type = "True",
+                                            haplo_assignment_type = "Used mat pedigree")
 
-#Do this for the others too if it works 
+
+PatR1_NoGE_SNP2k_Haplo2 <- run_paternity_tests(results_arg = Route2_NoGE_SNP2k$phased_results_flipped,
+                                               sister_thresholds = sister_thresholds,
+                                               father_test_thresholds = father_test_thresholds,
+                                               pedigree = Sim_pedigree_mat,
+                                               recon_pedigree = NULL,
+                                               father_haplotypes = father_haplotype_pat,
+                                               data_type = "NoGE_2k",
+                                               haplo_assignment_type = "Used mat pedigree")
 
 
-plot_paternity_number_grid_DRONES(PatR1_SimTrue_Haplo1)
-plot_paternity_number_grid_DRONES(PatR1_SimTrue_Haplo2)
+PatR1_NoGE_SNP50k_Haplo2 <- run_paternity_tests(results_arg = Route2_NoGE_SNP50k$phased_results_flipped,
+                                                sister_thresholds = sister_thresholds,
+                                                father_test_thresholds = father_test_thresholds,
+                                                pedigree = Sim_pedigree_mat,
+                                                recon_pedigree = NULL,
+                                                father_haplotypes = father_haplotype_pat,
+                                                data_type = "NoGE_50k",
+                                                haplo_assignment_type = "Used mat pedigree")
+
+PatR1_WithGE_SNP2k_Haplo2 <- run_paternity_tests(results_arg = Route2_WithGE_SNP2k$phased_results_flipped,
+                                                 sister_thresholds = sister_thresholds,
+                                                 father_test_thresholds = father_test_thresholds,
+                                                 pedigree = Sim_pedigree_mat,
+                                                 recon_pedigree = NULL,
+                                                 father_haplotypes = father_haplotype_pat,
+                                                 data_type = "WithGE_SNP2k",
+                                                 haplo_assignment_type = "Used mat pedigree")
+
+
+PatR1_WithGE_SNP50k_Haplo2 <- run_paternity_tests(results_arg = Route2_WithGE_SNP50k$phased_results_flipped,
+                                                  sister_thresholds = sister_thresholds,
+                                                  father_test_thresholds = father_test_thresholds,
+                                                  pedigree = Sim_pedigree_mat,
+                                                  recon_pedigree = NULL,
+                                                  father_haplotypes = father_haplotype_pat,
+                                                  data_type = "WithGE_SNP50k",
+                                                  haplo_assignment_type = "Used mat pedigree")
+
+
+
+
+# plot_paternity_number_grid_DRONES(PatR1_SimTrue_Haplo1)
+# plot_paternity_number_grid_DRONES(PatR1_SimTrue_Haplo2)
 #Do this for the others too if it works 
 
 ################################################################################
@@ -631,59 +703,135 @@ plot_paternity_number_grid_DRONES(PatR1_SimTrue_Haplo2)
 
 #••• SIMULATED ••• 
 
-#Load the outputs of 7_Haplotype_ParentageAssignments script <--------------------- LOOK HERE 
-Haplo_R2_SimTrue <-  Route2_SimTrue
-Haplo_R2_NoGE_SNP2k <-  Route2_NoGE_SNP2k
-Haplo_R2_WithGE_SNP2k <-  Route2_WithGE_SNP2k
-Haplo_R2_NoGE_SNP50k <-  Route2_NoGE_SNP50k
-Haplo_R2_WithGE_SNP50k <-  Route2_WithGE_SNP50k
-
 #Run 2 things: 
 #1. Run with haplotypes that have gone through route1 of haplotype parental assignment
 #2. Run with haplotypes that have gone through route2 of haplotype parental assignment 
 
 # Haplotypes route 1 : with recon pedigree and both parents 
 
-PatR2_SimTrue_Haplo1 <- run_sister_clustering_tests(results_arg = Haplo_R1_SimTrue$real_results_flipped,
+sister_thresholds <- c(1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.7)
+
+PatR2_SimTrue_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_SimTrue$real_results_flipped,
+                                                       sister_thresholds = sister_thresholds,
+                                                       pedigree = Sim_pedigree_mat,
+                                                       recon_pedigree = NULL,
+                                                       simulated = TRUE,
+                                                    data_type = "True",
+                                                    haplo_assignment_type = "Used recon pedigree")
+
+PatR2_NoGE_SNP2k_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_NoGE_SNP2k$results_flipped,
                                                     sister_thresholds = sister_thresholds,
-                                                    pedigree = simulated_pedigree,
-                                                    simulated = TRUE)
+                                                    pedigree = Sim_pedigree_mat,
+                                                    recon_pedigree = Rec_pedigree_2k_NoGE_filtered,
+                                                    simulated = TRUE,
+                                                    data_type = "NoGE_SNP2k",
+                                                    haplo_assignment_type = "Used recon pedigree")
+
+PatR2_NoGE_SNP50k_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_NoGE_SNP50k$results_flipped,
+                                                       sister_thresholds = sister_thresholds,
+                                                       pedigree = Sim_pedigree_mat,
+                                                       recon_pedigree = Rec_pedigree_50k_NoGE_filtered,
+                                                       simulated = TRUE,
+                                                       data_type = "NoGE_SNP50k",
+                                                       haplo_assignment_type = "Used recon pedigree")
+
+PatR2_WithGE_SNP2k_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_WithGE_SNP2k$results_flipped,
+                                                       sister_thresholds = sister_thresholds,
+                                                       pedigree = Sim_pedigree_mat,
+                                                       recon_pedigree = Rec_pedigree_2k_WithGE_filtered,
+                                                       simulated = TRUE,
+                                                       data_type = "WithGE_SNP2k",
+                                                       haplo_assignment_type = "Used recon pedigree")
+
+PatR2_WithGE_SNP50k_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_WithGE_SNP50k$results_flipped,
+                                                        sister_thresholds = sister_thresholds,
+                                                        pedigree = Sim_pedigree_mat,
+                                                        recon_pedigree = Rec_pedigree_50k_WithGE_filtered,
+                                                        simulated = TRUE,
+                                                        data_type = "WithGE_SNP50k",
+                                                        haplo_assignment_type = "Used recon pedigree")
 
 # Haplotypes route 2 : with maternal pedigree and only maternal info 
-PatR2_SimTrue_Haplo2 <- run_sister_clustering_tests(results_arg = Haplo_R2_SimTrue$real_results_flipped,
+PatR2_SimTrue_Haplo2 <- run_sister_clustering_tests(results_arg = Route2_SimTrue$real_results_flipped,
                                                     sister_thresholds = sister_thresholds,
-                                                    pedigree = simulated_pedigree,
-                                                    simulated = TRUE)
+                                                    pedigree = Sim_pedigree_mat,
+                                                    recon_pedigree = NULL,
+                                                    simulated = TRUE,
+                                                    data_type = "True",
+                                                    haplo_assignment_type = "Used mat pedigree")
+
+PatR2_NoGE_SNP2k_Haplo2 <- run_sister_clustering_tests(results_arg = Route2_NoGE_SNP2k$phased_results_flipped,
+                                                       sister_thresholds = sister_thresholds,
+                                                       pedigree = Sim_pedigree_mat,
+                                                       recon_pedigree = NULL,
+                                                       simulated = TRUE,
+                                                       data_type = "NoGE_2k",
+                                                       haplo_assignment_type = "Used mat pedigree")
+
+PatR2_NoGE_SNP50k_Haplo2 <- run_sister_clustering_tests(results_arg = Route2_NoGE_SNP50k$phased_results_flipped,
+                                                        sister_thresholds = sister_thresholds,
+                                                        pedigree = Sim_pedigree_mat,
+                                                        recon_pedigree = NULL,
+                                                        simulated = TRUE,
+                                                        data_type = "NoGE_50k",
+                                                        haplo_assignment_type = "Used mat pedigree")
+
+PatR2_WithGE_SNP2k_Haplo2 <- run_sister_clustering_tests(results_arg = Route2_WithGE_SNP2k$phased_results_flipped,
+                                                         sister_thresholds = sister_thresholds,
+                                                         pedigree = Sim_pedigree_mat,
+                                                         recon_pedigree = NULL,
+                                                         simulated = TRUE,
+                                                         data_type = "WithGE_2k",
+                                                         haplo_assignment_type = "Used mat pedigree")
+
+
+PatR2_WithGE_SNP50k_Haplo2 <- run_sister_clustering_tests(results_arg = Route2_WithGE_SNP50k$phased_results_flipped,
+                                                          sister_thresholds = sister_thresholds,
+                                                          pedigree = Sim_pedigree_mat,
+                                                          recon_pedigree = NULL,
+                                                          simulated = TRUE,
+                                                          data_type = "WithGE_50k",
+                                                          haplo_assignment_type = "Used mat pedigree")
 
 #Do this for the others too if it works 
 
-plot_paternity_number_grid_SISTERONLY(
-  Dataset1 = PatR2_SimTrue_Haplo1,
-  Dataset2 = PatR2_NoGE_SNP2k_Haplo1,
-  Dataset3= PatR2_WithGE_SNP2k_Haplo1)
-
-plot_paternity_number_grid_SISTERONLY(
-  Dataset1 = PatR2_SimTrue_Haplo2,
-  Dataset2 = PatR2_NoGE_SNP2k_Haplo2,
-  Dataset3= PatR2_WithGE_SNP2k_Haplo2)
-
-
-
-#••• REAL ••• 
-
-PatR2_Real_Haplo1 <- run_sister_clustering_tests(results_arg = Haplo_R1_Real$results$flipped,
-                                                 sister_thresholds = sister_thresholds,
-                                                 pedigree = Slov_pedigree_rec_filtered,
-                                                 simulated = FALSE)
+# plot_paternity_number_grid_SISTERONLY(
+#   Dataset1 = PatR2_SimTrue_Haplo1,
+#   Dataset2 = PatR2_NoGE_SNP2k_Haplo1,
+#   Dataset3= PatR2_WithGE_SNP2k_Haplo1)
+# 
+# plot_paternity_number_grid_SISTERONLY(
+#   Dataset1 = PatR2_SimTrue_Haplo2,
+#   Dataset2 = PatR2_NoGE_SNP2k_Haplo2,
+#   Dataset3= PatR2_WithGE_SNP2k_Haplo2)
 
 
-PatR2_Real_Haplo2 <- run_sister_clustering_tests(results_arg = Haplo_R2_Real$results$flipped,
+
+#** ••• REAL ••• **
+
+colnames(Slov_pedigree_mat_filtered) <- c("id", "dpc", "mother")
+colnames(Slov_pedigree_rec_filter) <- c("id", "dpc", "mother")
+
+PatR2_Real_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_Real$results_flipped,
                                                  sister_thresholds = sister_thresholds,
                                                  pedigree = Slov_pedigree_mat_filtered,
-                                                 simulated = FALSE)
+                                                 recon_pedigree = Slov_pedigree_rec_filter,
+                                                 simulated = FALSE,
+                                                 data_type = "Real",
+                                                 haplo_assignment_type = "Used recon pedigree")
+
+
+PatR2_Real_Haplo2 <- run_sister_clustering_tests(results_arg = Route2_Real$phased_results_flipped,
+                                                 sister_thresholds = sister_thresholds,
+                                                 pedigree = Slov_pedigree_mat_filtered,
+                                                 recon_pedigree = NULL,
+                                                 simulated = FALSE,
+                                                 data_type = "Real",
+                                                 haplo_assignment_type = "Used mat pedigree")
 
 
 
+save.image(file = paste0(workingDir, "/Data/Pipeline/9_DeterminingPatrilines.Rdata"))
 
 
 

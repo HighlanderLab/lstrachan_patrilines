@@ -68,11 +68,18 @@ write.table(Alpha_pedigree_sim_full, file = "Data/SimData_Pedigree_Full_Maternal
 dir.create("Data/AlphaAssign", showWarnings = FALSE)
 write.table(Alpha_pedigree_sim, file = "Data/AlphaAssign/SimData_Pedigree.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
-Potential_fathers <- data.frame(id = pedigree_file$id,
-                                Dpc1 = rep(unique(pedigree_file$dpc)[1], length(pedigree_file$dpc)),
-                                Dpc2 = rep(unique(pedigree_file$dpc)[2], length(pedigree_file$dpc)),
-                                Dpc3 = rep(unique(pedigree_file$dpc)[3], length(pedigree_file$dpc)),
-                                Dpc4 = rep(unique(pedigree_file$dpc)[4], length(pedigree_file$dpc)))
+# if (length(unique(pedigree_file$dpc)) != 4) {
+#   stop("There should be exactly 4 unique DPCs in the pedigree file.")
+# }
+dpcs <- unique(pedigree_file$dpc)
+
+# Create a data frame with id
+Potential_fathers <- data.frame(id = pedigree_file$id)
+
+# Add one column per DPC dynamically
+for (i in seq_along(dpcs)) {
+  Potential_fathers[[paste0("Dpc", i)]] <- rep(dpcs[i], nrow(pedigree_file))
+}
 
 write.table(Potential_fathers, file = "Data/AlphaAssign/SimData_PotentialFathers.list", sep = " ",  quote = F, col.names = F, row.names = F)
 
@@ -276,3 +283,4 @@ write.table(Alpha_pedigree_sim_50K_withGE, file = paste0(repDir, "Outputs/AlphaA
 AlphaAssign_Summary <- rbind(NoGE_Alpha_output, WithGE_Alpha_output)
 write.table(AlphaAssign_Summary, file = paste0(repDir, "Outputs/AlphaAssign/Alpha_summary.txt"), sep = " ", quote = F, col.names = T, row.names = F)
 
+save.image(file = paste0(repDir, "/Pipeline/2_AlphaAssign.Rdata"))
