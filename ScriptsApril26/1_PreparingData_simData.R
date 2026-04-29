@@ -219,8 +219,8 @@ combine_haplotypes <- function(haplotype_matrix) {
 
 
 
-dir.create("Data/Sim_NoGE")
-dir.create("Data/Sim_WithGE")
+dir.create("Data/Sim_NoGE", showWarnings = FALSE)
+dir.create("Data/Sim_WithGE", showWarnings = FALSE)
 
 
 #Now we make a loop for all of the different arrays, going through and saving the needed info for each one.
