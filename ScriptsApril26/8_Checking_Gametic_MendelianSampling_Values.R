@@ -57,6 +57,7 @@ Plotting_Gametic_R1 <- function(df, phased_type, plotting_styles) {
           geom_histogram(aes(y = after_stat(count)), binwidth = 1, alpha = 0.7, position = 'identity') +
           geom_histogram(aes(x = Dpc_Mendelian, y = after_stat(count), fill = "Paternal"), 
                          binwidth = 1, alpha = 0.7, position = 'identity') +
+          geom_vline(xintercept = 0, color = "black", linetype = "solid", linewidth = 0.8) +
           labs(title = paste(phase), x = "Mendelian Sampling", y = "Count") +
           theme_minimal() +
           theme(plot.title = element_text(size = 20),
@@ -69,6 +70,7 @@ Plotting_Gametic_R1 <- function(df, phased_type, plotting_styles) {
           geom_density(aes(x = Dpc_Mendelian, y = after_stat(scaled), color = "Paternal"), alpha = 0.7) +
           geom_vline(xintercept = m_mean, color = "blue", linetype = "dashed") +
           geom_vline(xintercept = p_mean, color = "red", linetype = "dashed") +
+          geom_vline(xintercept = 0, color = "black", linetype = "solid", linewidth = 0.8) +
           labs(title = paste(phase), x = "Mendelian Sampling", y = "Density") +
           theme_minimal() +
           theme(plot.title = element_text(size = 20),
@@ -144,6 +146,7 @@ Plotting_Gametic_R2 <- function(df, phased_type, plotting_styles) {
         p <- ggplot(curr_df, aes(x = Maternal_Mendelian, color = "Maternal")) +
           geom_density(aes(y = after_stat(scaled)), alpha = 0.7) +
           geom_vline(xintercept = m_mean, color = "blue", linetype = "dashed") +
+          geom_vline(xintercept = 0, color = "black", linetype = "solid", linewidth = 0.8) +
           labs(title = paste(phase), x = "Mendelian Sampling", y = "Density") +
           theme_minimal() +
           theme(plot.title = element_text(size = 20),
@@ -433,11 +436,6 @@ Route2_Mendelian_sim_df <- rbind(Route2_Gametic_TRUE, Route2_Gametic_NoGE_phased
 
 
 #** REAL DATA **
-Slov_pedigree_mat_filtered <- Slov_pedigree_mat[Slov_pedigree_mat$dam != 0,] # Remove rows with unknown mothers 
-tmp <-sub("_.*", "", rownames(Slov_PhasedHaplotypes_matPed))
-tmp <- unique(tmp)
-Slov_pedigree_mat_filtered <- Slov_pedigree_mat_filtered[Slov_pedigree_mat_filtered$id %in% tmp,]
-colnames(Slov_pedigree_mat_filtered) <- c("id", "dpc", "mother")
 Route2_Gametic_Slov <- calculate_gametic_relatedness_R2(sorted_offspring_haplotypes = Route2_Real$phased_results_flipped, all_haplotypes = Slov_PhasedHaplotypes_matPed, pedigree = Slov_pedigree_mat_filtered)
 Route2_Gametic_Slov$Phasing <- "Real"
 
