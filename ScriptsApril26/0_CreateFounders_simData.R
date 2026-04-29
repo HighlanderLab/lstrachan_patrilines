@@ -283,6 +283,7 @@ for (gen in 1:10) {
 
     #create Mating station Drones where the dpcs are
     DPQs <- createVirginQueens(colony1, nInd = 10)
+    DPQs <- selectInd(DPQs, nInd = 4, use = "rand") 
 
     # Compute relatedness of DPQs
     DPQ_geno = pullSegSiteGeno(DPQs)
