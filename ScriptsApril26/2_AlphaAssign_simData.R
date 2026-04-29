@@ -55,7 +55,7 @@ ped_to_raw <- function(ped_file, map_file, output_file) {
 }
 
 
-pedigree_file <- read.csv("/Data/worker_pedigree.csv")
+pedigree_file <- read.csv("Data/worker_pedigree.csv")
 
 Alpha_pedigree_sim <- data.frame(id = pedigree_file$id,
                              sire = rep(0, length(pedigree_file$id)),
@@ -122,22 +122,27 @@ setwd(repDir)
 
 ############### Running AlphAssign in terminal################
   #create a for loop here for all of the SNP array sizes <-------------- 
+print("Creating directories for AlphaAssign outputs")
 dir.create("Outputs/", showWarnings = FALSE)
 dir.create("Outputs/AlphaAssign", showWarnings = FALSE)
 
+print("Running AlphaAssign With GE")
 #With genotyping errors:
 for (n in 1:5){
   print(n)
-  system(paste0("bash ", workingDir, "/ScriptsApril26/RunAlphaAssign_SimData.sh AlphaGeno_SNP", n, "_WithGE ", repDir, "Data/AlphaAssign/ ", repDir, "Outputs/AlphaAssign/"))
+  system(paste0("AlphaAssign -genotypes ", repDir, "/Data/AlphaAssign/AlphaGeno_SNP", n, "_WithGE.txt -potentialsires ", repDir, "/Data/AlphaAssign/SimData_PotentialFathers.list -pedigree ", repDir, "/Data/AlphaAssign/SimData_Pedigree.txt -out ", repDir, "/Outputs/AlphaAssign/AlphaGeno_SNP", n, "_WithGE -runtype likelihood"))
+
+  #system(paste0("bash ", workingDir, "/ScriptsApril26/RunAlphaAssign_SimData.sh AlphaGeno_SNP", n, "_WithGE ", repDir, "Data/AlphaAssign/ ", repDir, "Outputs/AlphaAssign/"))
 }
 
+print("Running AlphaAssign No GE")
 #No genotyping errors:
 for (n in 1:5){
   print(n)
-  system(paste0("bash ", workingDir, "/ScriptsApril26/RunAlphaAssign_SimData.sh AlphaGeno_SNP", n, "_NoGE ", repDir, "Data/AlphaAssign/ ", repDir, "Outputs/AlphaAssign/"))
+  system(paste0("AlphaAssign -genotypes ", repDir, "/Data/AlphaAssign/AlphaGeno_SNP", n, "_NoGE.txt -potentialsires ", repDir, "/Data/AlphaAssign/SimData_PotentialFathers.list -pedigree ", repDir, "/Data/AlphaAssign/SimData_Pedigree.txt -out ", repDir, "/Outputs/AlphaAssign/AlphaGeno_SNP", n, "_NoGE -runtype likelihood"))
 }
 
-
+print("Done running AlphaAssign")
 ############### Processing AlphaAssign output #################
 
 Process_AlphaAssign_output <- function(GE = NULL, True_pedigree = NULL, nOffspring = NULL) {
@@ -199,12 +204,13 @@ Process_AlphaAssign_output <- function(GE = NULL, True_pedigree = NULL, nOffspri
   return(final_df)
 }
 
+print("Processing AlphaAssign output")
 setwd(paste0(repDir, "/Outputs/AlphaAssign/"))
 NoGE_Alpha_output <- Process_AlphaAssign_output(GE = FALSE, True_pedigree = True_pedigree, nOffspring = nrow(Worker_known))
 WithGE_Alpha_output <- Process_AlphaAssign_output(GE = TRUE, True_pedigree = True_pedigree, nOffspring = nrow(Worker_known))
 
 
-
+print("Updating pedigrees with AlphaAssign results")
 # Updating the pedigree 
 #Original pedigree = Alpha_pedigree
 # NoGE updated pedigree ----------------------------------------------------

@@ -6,6 +6,7 @@ library(AlphaSimR)
 library(SIMplyBee)
 library(readr)
 library(genio)
+library(forecast)
 
 args = commandArgs(trailingOnly=TRUE)
 Rep = args[1]
