@@ -11,8 +11,8 @@ library(dplyr)
 
 #****** 1. SIMULATED *******************************************************
 
-pathToPlink <- "~/Desktop/PLINK/./"
-workingDir = "~/Desktop/lstrachan_patrilines"
+pathToPlink <- "/home/dir/bin"
+workingDir = "/home/jana/github/lstrachan_patrilines"
 setwd(workingDir)
 
 #Setting up the input files 
