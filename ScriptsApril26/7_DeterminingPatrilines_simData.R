@@ -69,6 +69,7 @@ father_test_thresholds <- c(1,0.95, 0.9)
 #2. Run with haplotypes that have gone through route2 of haplotype parental assignment 
 
 # Haplotypes route 1 : with recon pedigree and both parents 
+colnames(Route1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
 PatR1_SimTrue_Haplo1 <- run_paternity_tests(results_arg = Route1_SimTrue$real_results_flipped,
                                                sister_thresholds = sister_thresholds,
                                                father_test_thresholds = father_test_thresholds,

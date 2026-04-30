@@ -27,7 +27,7 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
     print(i)
     queen_id <- queen_ids[i]
     sister_worker_ids <- t(pedigree[pedigree$mother == queen_id, "id"])
-    nPaternity$num_workers_actual[i]  <- nrow(pedigree[pedigree$mother == queen_id, "id"])
+    nPaternity$num_workers_actual[i]  <- length(pedigree[pedigree$mother == queen_id, "id"])
     num_dpqs_actual <- pedigree[pedigree$mother == queen_id,]
     
     nPaternity$num_dpqs_actual[i] <- length(unique(num_dpqs_actual$dpc))
