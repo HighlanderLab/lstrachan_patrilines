@@ -16,12 +16,12 @@ workingDir = "~/Desktop/lstrachan_patrilines"
 setwd(workingDir)
 
 #Setting up the input files *****************
-
-pedigree_file <- read.csv("Data/worker_pedigree.csv")
+setwd("~/Desktop/lstrachan_patrilines/SimRep2/Data")
+pedigree_file <- read_csv("~/Desktop/lstrachan_patrilines/SimRep2/Data/worker_pedigree.csv")
 #Known Mothers 
 Known_Mothers <- data.frame(worker_id = pedigree_file$id,
                             mother_id = pedigree_file$mother)
-write.table(Known_Mothers, file = "Known_Mothers.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Known_Mothers, file = "Colony/Known_Mothers.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
 #Excluded mothers - For each worker_id, find the non-mothers and store in result_list
 create_excluded_mothers <- function(Known_Mothers) {
@@ -52,7 +52,7 @@ create_excluded_mothers <- function(Known_Mothers) {
 
 excluded_mother <- create_excluded_mothers(Known_Mothers)
 
-write.table(excluded_mother, file = "Excluded_mothers.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(excluded_mother, file = "Colony/Excluded_mothers.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
 #Excluded siblings - For each worker_id, find the non-siblings and store in result_list
 create_excluded_siblings <- function(Known_Mothers) {
@@ -90,77 +90,46 @@ create_excluded_siblings <- function(Known_Mothers) {
 
 excluded_siblings <- create_excluded_siblings(Known_Mothers)
 
-write.table(excluded_siblings, file = "Excluded_siblings.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(excluded_siblings, file = "Colony/Excluded_siblings.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
 #Genotypes 
 # •• NO GE ••
-for (n in 1:5){
-Ped <- read.table("SNP",n,"_Genotypes.ped") # TODO : Add in correct file name
-Genotypes <- read.table("Slov_fM_AC_QC.ped")
+setwd("~/Desktop/lstrachan_patrilines/SimRep2/Data/Sim_NoGE")
 worker_ids <- unique(pedigree_file$id)
 queen_ids <- unique(pedigree_file$mother)
 dpc_ids <- unique(pedigree_file$dpc)
 
+for (n in 1:5){
+Genotypes <- read.table(paste0("SNP_",n,"_NoGE_QC.ped"))
+
 Worker_genotypes <- Genotypes[Genotypes$V2 %in% worker_ids,]
-write.table(WorkerGeno, file = "Col_workerGeno_SNP",n,"_NoGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Worker_genotypes, file = paste0("../Colony/Col_workerGeno_SNP",n,"_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 Queen_genotypes <- Genotypes[Genotypes$V2 %in% queen_ids,]
-write.table(Queen_genotypes, file = "Col_queenGeno_SNP",n,"_NoGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Queen_genotypes, file = paste0("../Colony/Col_queenGeno_SNP",n,"_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 Dpc_genotypes <- Genotypes[Genotypes$V2 %in% dpc_ids,]
-write.table(Queen_genotypes, file = "Col_dpcGeno_SNP",n,"_NoGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+write.table(Dpc_genotypes, file = paste0("../Colony/Col_dpcGeno_SNP",n,"_NoGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
 
 }
 #•• WITH GE ••
+
+setwd("~/Desktop/lstrachan_patrilines/SimRep2/Data/Sim_WithGE")
 for (n in 1:5){
-  Genotypes <- read.table("ADD PED FILE NAME HERE")
-  worker_ids <- unique(pedigree_file$id)
-  queen_ids <- unique(pedigree_file$mother)
-  dpc_ids <- unique(pedigree_file$dpc)
+  Genotypes <- read.table(paste0("SNP_",n,"_WithGE_QC.ped"))
   
   Worker_genotypes <- Genotypes[Genotypes$V2 %in% worker_ids,]
-  write.table(WorkerGeno, file = "Col_workerGeno_SNP",n,"_WithGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+  write.table(Worker_genotypes, file = paste0("../Colony/Col_workerGeno_SNP",n,"_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
   
   Queen_genotypes <- Genotypes[Genotypes$V2 %in% queen_ids,]
-  write.table(Queen_genotypes, file = "Col_queenGeno_SNP",n,"_WithGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+  write.table(Queen_genotypes, file = paste0("../Colony/Col_queenGeno_SNP",n,"_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
   
   Dpc_genotypes <- Genotypes[Genotypes$V2 %in% dpc_ids,]
-  write.table(Queen_genotypes, file = "Col_dpcGeno_SNP",n,"_WithGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
+  write.table(Dpc_genotypes, file = paste0("../Colony/Col_dpcGeno_SNP",n,"_WithGE.txt"), sep = " ", quote = F, col.names = F, row.names = F)
   
 }
 
 
 
-#****** 2. REAL DATA *******************************************************
-pathToPlink <- "~/Desktop/PLINK/./"
-workingDir = "~/Desktop/lstrachan_patrilines"
-setwd(workingDir)
 
-pedigree_file <- read.csv("Data/Real_data/Real_Data_pedigree.csv")
-colnames(pedigree_file) <- c("id", "sire", "dam")
-
-#Known Mothers 
-Known_Mothers <- data.frame(worker_id = pedigree_file$id,
-                            mother_id = pedigree_file$dam)
-
-write.table(Known_Mothers, file = "Known_Mothers.txt", sep = " ", quote = F, col.names = F, row.names = F)
-
-excluded_mother <- create_excluded_mothers(Known_Mothers)
-write.table(excluded_mother, file = "Excluded_mothers.txt", sep = " ", quote = F, col.names = F, row.names = F)
-
-
-excluded_siblings <- create_excluded_siblings(Known_Mothers)
-write.table(excluded_siblings, file = "Excluded_siblings.txt", sep = " ", quote = F, col.names = F, row.names = F)
-
-queen_ids <- unique(pedigree_file$dam)
-all_ids <- unique(pedigree_file$id)
-workers_ids <- setdiff(all_ids, queen_ids)
-
-Ped <- read.table("ADD PED NAME HERE")
-
-Worker_genotypes <- Genotypes[Genotypes$V2 %in% worker_ids,]
-write.table(WorkerGeno, file = "Col_workerGeno_SNP",n,"_WithGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
-
-Queen_genotypes <- Genotypes[Genotypes$V2 %in% queen_ids,]
-write.table(Queen_genotypes, file = "Col_queenGeno_SNP",n,"_WithGE.txt", sep = " ", quote = F, col.names = F, row.names = F)
 
