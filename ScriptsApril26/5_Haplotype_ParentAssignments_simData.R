@@ -1373,7 +1373,7 @@ Route1_NoGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec
 print("WithGE")
 Route1_WithGE_SNP50k <- Route1_flipping(perfect_haplotypes = FALSE, pedigree = Rec_pedigree_50k_WithGE_filtered, method = "power_mean", Data_type = "WithGE_SNP50k")
 
-save(Route1_SimTrue, Route1_NoGE_SNP2k, Route1_WithGE_SNP2k, Route1_NoGE_SNP50k, Route1_WithGE_SNP50k, file = paste0(repDir, "/Pipeline/7_Haplotype_ParentAssignments_Route1.RData"))
+save(Route1_SimTrue, Route1_NoGE_SNP2k, Route1_WithGE_SNP2k, Route1_NoGE_SNP50k, Route1_WithGE_SNP50k, file = paste0(repDir, "/Pipeline/5_Haplotype_ParentAssignments_Route1.RData"))
 
 # #Checking haplotypes post flip to see if something has happened
 # colnames(Route1_SimTrue$real_results_flipped) <- colnames(true_haplotypes)
@@ -1409,7 +1409,7 @@ Route2_WithGE_SNP50k <- Route2_flipping(perfect_haplotypes = FALSE, pedigree = W
 
 print("Saving data")
 save.image(file="TEST")
-save(Route2_NoGE_SNP2k, Route2_WithGE_SNP2k, Route2_NoGE_SNP50k, Route2_WithGE_SNP50k, file = paste0(repDir, "/Pipeline/7_Haplotype_ParentAssignments_Route2.RData"))
+save(Route2_NoGE_SNP2k, Route2_WithGE_SNP2k, Route2_NoGE_SNP50k, Route2_WithGE_SNP50k, file = paste0(repDir, "/Pipeline/5_Haplotype_ParentAssignments_Route2.RData"))
 
 
 print("Saving data")
