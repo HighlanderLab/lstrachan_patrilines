@@ -2,7 +2,8 @@
 # Running and analysing KING pedigree reconstruction software - REAL DATA
 #******************************************************************************
 library(ggplot2)
-setwd(workingDir, "/Data/Real_data")
+setwd("~/Desktop/lstrachan_patrilines/Real_data/Data")
+pathToPlink2 <- "~/Desktop/PLINK2"
 
 system(paste0(pathToPlink2,"/plink2 --bfile Slov_fM_QC --make-king-table --out Real_KINGoutput")) 
 
@@ -35,21 +36,26 @@ plot_ibs0_kinship(Real_KINGoutput)
 # Select those with a Kinship >0.2 to more accuratetly find the fathers and IBS < 0.005
 Real_KING_0.2 <- Real_KINGoutput[Real_KINGoutput$KINSHIP >= 0.2 & Real_KINGoutput$IBS0 < 0.005,]
 nsires_assigned <- nrow(Real_KING_0.2)
-#Also take only the ones where dpc has been assigned 
 plot_ibs0_kinship(Real_KING_0.2)
 
 #Load real pedigree to get dpc ids 
 samples <- read.csv("SNP_samples_2022.csv")
 dpc_ids <- samples$snp_id[samples$biotype == "dpc"]
 
-Real_KING_dpcs <- Real_KING_0.2[Real_KING_0.2$IID2 %in% dpc_ids,]
+worker_ids <- samples$snp_id[samples$biotype == "worker"]
+
+#make sure the first ids are workers only 
+Real_KING_filter <- Real_KING_0.2[Real_KING_0.2$IID1 %in% worker_ids,]
+
+Real_KING_dpcs <- Real_KING_filter[Real_KING_filter$IID2 %in% dpc_ids,]
 ndpcs_assigned <- nrow(Real_KING_dpcs)
 
 df <- data.frame(
   Test = "Real",
-  nSires_assigned = nsires_assigned,
   nDPQs_assigned = ndpcs_assigned,
+  Multi_perWorker = length(unique(Real_KING_dpcs$IID1)) != nrow(Real_KING_dpcs),
   Software = "KING"
 )
 
-save.image(file = paste0(workingDir, "/Data/Real_data/KINGoutput.Rdata"))
+write.table(df, file = "KING_real_summary.txt")
+save.image(file = "KINGoutput.Rdata")
