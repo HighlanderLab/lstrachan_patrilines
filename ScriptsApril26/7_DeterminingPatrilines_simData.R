@@ -17,6 +17,8 @@
 rm(list = ls())
 # --- Libraries ---
 
+library(AlphaSimR)
+
 args = commandArgs(trailingOnly=TRUE)
 Rep = args[1]
 workingDir = args[2]
@@ -36,7 +38,7 @@ source(paste0(workingDir, "/ScriptsApril26/7_DeterminingPatrilines_functions.R")
 ################################################################################
 
 #Load the outputs of 7_Haplotype_ParentageAssignments script
-load("Pipeline/5_Haplotype_ParentAssignments.Rdata")
+load("Pipeline/5_Haplotype_ParentAssignments.RData")
 
 #••••• Simulated ••••• Can't do this with Real data since we don't have the father/drone info 
 
