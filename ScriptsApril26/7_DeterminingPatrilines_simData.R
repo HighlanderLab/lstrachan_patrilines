@@ -17,6 +17,8 @@
 rm(list = ls())
 # --- Libraries ---
 
+library(AlphaSimR)
+
 args = commandArgs(trailingOnly=TRUE)
 Rep = args[1]
 workingDir = args[2]
