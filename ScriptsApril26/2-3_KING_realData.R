@@ -1,14 +1,26 @@
 #******************************************************************************
 # Running and analysing KING pedigree reconstruction software - REAL DATA
 #******************************************************************************
-library(ggplot2)
-setwd("~/Desktop/lstrachan_patrilines/Real_data/Data")
-pathToPlink2 <- "~/Desktop/PLINK2"
+rm(list = ls())
 
-system(paste0(pathToPlink2,"/plink2 --bfile Slov_fM_QC --make-king-table --out Real_KINGoutput")) 
+args = commandArgs(trailingOnly=TRUE)
+workingDir = args[1]
+softwareDir = args[2]
+pathToPlink <- softwareDir
+pathToBeagle <- softwareDir
+
+
+# Set working directory
+setwd(paste0(workingDir, "/Real_data/"))
+
+
+library(ggplot2)
+
+dir.create("Outputs/KING", showWarnings = F)
+system(paste0(pathToPlink,"/plink2 --bfile Data/Slov_fM_QC --make-king-table --out Outputs/KING/Real_KINGoutput")) 
 
 #process the output file kin.0
-Real_KINGoutput <- read.table("Real_KINGoutput.kin0")
+Real_KINGoutput <- read.table("Outputs/KING/Real_KINGoutput.kin0")
 Real_KINGoutput$Test <- "Real"
 colnames(Real_KINGoutput) <- c("FID1","IID1",	"FID2",	"IID2",	"NSNP",	"HETHET",	"IBS0",	"KINSHIP", "Test")
 
@@ -39,7 +51,7 @@ nsires_assigned <- nrow(Real_KING_0.2)
 plot_ibs0_kinship(Real_KING_0.2)
 
 #Load real pedigree to get dpc ids 
-samples <- read.csv("SNP_samples_2022.csv")
+samples <- read.csv("Data/SNP_samples_2022.csv")
 dpc_ids <- samples$snp_id[samples$biotype == "dpc"]
 
 worker_ids <- samples$snp_id[samples$biotype == "worker"]
@@ -57,5 +69,5 @@ df <- data.frame(
   Software = "KING"
 )
 
-write.table(df, file = "KING_real_summary.txt")
-save.image(file = "KINGoutput.Rdata")
+write.csv(df, file = "Outputs/KING/KING_summary.txt", quote=F, row.names=F)
+save.image(file = "Pipeline/KINGoutput.Rdata")

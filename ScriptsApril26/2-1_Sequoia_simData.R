@@ -116,12 +116,16 @@ for (n in 1:5){
   
   nSires_assigned <- sum(!is.na(SequoiaOutPut$PedigreePar$sire))
   nCorrect_sires <- sum(PC_par[["MergedPed"]][["sire.class"]] == "Match")
+  nCorrect_dams <- sum(PC_par[["MergedPed"]][["dam.class"]] == "Match")
+  nMismatch <- sum((mergedPed$sire.class == "Match" & mergedPed$dam.class != "Match" ))
   
   Sequoia_file <- data.frame(Test = "NoGE",
                              nOffspring = 240,
                              SNP_group = n,
                              nSires_assigned = nSires_assigned,
                              nCorrect_sires = nCorrect_sires,
+                             nCorrect_dam = nCorrect_dams,
+                             nDamSireMismatch = nMismatch,
                              Software = "Sequoia")
   results_list[[n]] <- Sequoia_file
 }
@@ -139,13 +143,18 @@ for (n in 1:5){
                        Ped2 = SequoiaOutPut$PedigreePar)
   
   nSires_assigned <- sum(!is.na(SequoiaOutPut$PedigreePar$sire))
-  nCorrect_sires <- sum(PC_par[["MergedPed"]][["sire.class"]] == "Match")
+  mergedPed <- PC_par[["MergedPed"]]
+  nCorrect_sires <- sum(mergedPed$sire.class == "Match")
+  nCorrect_dams <- sum(mergedPed$dam.class == "Match")
+  nMismatch <- sum((mergedPed$sire.class == "Match" & mergedPed$dam.class != "Match" ))
   
   Sequoia_file <- data.frame(Test = "WithGE",
                              nOffspring = 240,
                              SNP_group = n,
                              nSires_assigned = nSires_assigned,
                              nCorrect_sires = nCorrect_sires,
+                             nCorrect_dam = nCorrect_dams,
+                             nDamSireMismatch = nMismatch,
                              Software = "Sequoia")
   results_list[[n]] <- Sequoia_file
 }

@@ -2,11 +2,21 @@
 # Running and analysing KING pedigree reconstruction software - SIMULATED DATA
 #******************************************************************************
 
-pathToPlink2 <- "~/Desktop/PLINK2"
-workingDir = "~/Desktop/lstrachan_patrilines/SimRep2/Data/"
+rm(list = ls())
 
+args = commandArgs(trailingOnly=TRUE)
+Rep = args[1]
+workingDir = args[2]
+softwareDir = args[3]
+pathToPlink <- softwareDir
+pathToBeagle <- softwareDir
 
-worker_pedigree <- read_csv("~/Desktop/lstrachan_patrilines/SimRep2/Data/worker_pedigree.csv")
+repDir = paste0(workingDir, "/SimRep", Rep, "/")
+
+# Set working directory
+setwd(repDir)
+
+worker_pedigree <- read.csv("Data/worker_pedigree.csv")
 dpq_ids <- unique(worker_pedigree$dpc)
 worker_ids <- unique(worker_pedigree$id)
 
@@ -31,17 +41,17 @@ check_king <- function(KING_file, pedigree){
 }
 
 # •• No GE ••
-setwd(paste0(workingDir, "Sim_NoGE/"))
+dir.create("Outputs/KING", showWarnings = F)
+
 for (n in 1:5){ 
   print("NoGE_SNP", n)
-  system(paste0(pathToPlink2,"/plink2 --bfile SNP_",n,"_NoGE_QC --make-king-table --out NoGE_SNP",n,"_KINGoutput"))
+  system(paste0(pathToPlink,"/plink2 --bfile Data/Sim_NoGE/SNP_",n,"_NoGE_QC --make-king-table --out Outputs/KING/NoGE_SNP",n,"_KINGoutput"))
 }
 
 # •• With GE ••
-setwd(paste0(workingDir, "Sim_WithGE/"))
 for (n in 1:5){ 
   print("SNP", n)
-  system(paste0(pathToPlink2,"/plink2 --bfile SNP_",n,"_WithGE_QC --make-king-table --out WithGE_SNP",n,"_KINGoutput"))
+  system(paste0(pathToPlink,"/plink2 --bfile Data/Sim_WithGE/SNP_",n,"_WithGE_QC --make-king-table --out Outputs/KING/WithGE_SNP",n,"_KINGoutput"))
 }
 
 tests <- c("NoGE", "WithGE")
@@ -53,7 +63,7 @@ for (t in tests) {
   
   # Construct the specific test directory path
   # This targets "~/Desktop/lstrachan_patrilines/SimRep2/Data/Sim_NoGE/" etc.
-  testDir <- paste0(workingDir, "Sim_", t, "/")
+  testDir <- paste0(repDir, "/Outputs/KING/")
   
   # Change the working directory to the current test folder
   if (dir.exists(testDir)) {
@@ -111,5 +121,5 @@ for (t in tests) {
 final_results_table <- do.call(rbind, results_list)
 rownames(final_results_table) <- NULL
 
-write.table(final_results_table, file = "../KING/KING_summary_Simulated.txt", col.names = T, row.names = F)
-save.image(file = "../KING/KING_simulated.Rdata")
+write.table(final_results_table, file = "KING_summary.txt", col.names = T, row.names = F)
+save.image(file = paste0(repDir, "/Pipeline/KINGoutput.Rdata"))
