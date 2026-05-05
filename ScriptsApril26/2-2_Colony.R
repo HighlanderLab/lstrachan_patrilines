@@ -136,14 +136,18 @@ for (n in 1:5){
 }
 
 
-nLoci = 100
-n = 1
-sink("COLONY.txt")
-cat(paste0("'NoGE_SNP", n, "'   !Dataset name"))
+nSNP_array <- rbind(c(3125, 5L), c(108, 4L), c(50, 3L), c(10, 2L), c(1,1L))
+
+nLoci = nSNP_array[row, 1]
+n = nSNP_array[row, 2]
+
+
+sink(paste0("Data/Colony/colony2_SNP", n, ".dat"))
+cat(paste0("'", method, "_SNP", n, "'   !Dataset name"))
 cat("\n")
-cat(paste0("'NoGE_SNP", n, "'   !Output file name"))
+cat(paste0("'", method, "_SNP", n, "'   !Output file name"))
 cat("\n")
-cat("240         ! Number of offspring in the sample")
+cat(paste0(nrow(Worker_genotypes), "         ! Number of offspring in the sample"))
 cat("\n")
 cat(paste0(nLoci, "        ! Number of loci / same as genotype markers? (make sure same order is everywhere)"))
 
@@ -151,7 +155,7 @@ cat("
 123         ! Seed for random number generator (default used)
 1           ! 0/1=Not updating/updating allele frequency
 2           ! 2/1=Dioecious/Monoecious species
-0           ! 0/1=No inbreeding/inbreeding
+1           ! 0/1=No inbreeding/inbreeding
 0           ! 0/1=Diploid species/HaploDiploid species
 0  0        ! 0/1=Polygamy/Monogamy for males & females
 0           ! 0/1=Clone inference =No/Yes
@@ -230,3 +234,9 @@ write.table(excluded_siblings,
             col.names = FALSE,
             quote = FALSE)
 sink()
+
+
+cmd = paste0(softwareDir, "/colony/colony2s.ifort.out IFN:Data/Colony/colony2_SNP", n, ".dat")
+system(cmd)
+
+
