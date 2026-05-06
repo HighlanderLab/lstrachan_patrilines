@@ -17,8 +17,7 @@ repDir = paste0(workingDir, "/SimRep", Rep, "/")
 setwd(repDir)
 
 worker_pedigree <- read.csv("Data/worker_pedigree.csv")
-dpq_ids <- unique(worker_pedigree$dpc)
-worker_ids <- unique(worker_pedigree$id)
+
 
 
 check_king <- function(KING_file, pedigree){
@@ -80,12 +79,22 @@ for (t in tests) {
     
     if (file.exists(file_name)) {
       # Read the data
-      temp_data <- read.table(file_name, header = TRUE)
+      temp_data <- read.table(file_name, header = FALSE)
+
       
       # Select first 8 columns and rename
       temp_data <- temp_data[, 1:8]
       colnames(temp_data) <- c("FID1","IID1", "FID2", "IID2", "NSNP", "HETHET", "IBS0", "KINSHIP")
-      
+
+      # If a queen is removed, remove her offspring
+      dpq_ids <- unique(worker_pedigree$dpc[worker_pedigree$dpc %in% c(temp_data$IID1, temp_data$IID2)])
+      removed_queen <- worker_pedigree$mother[!worker_pedigree$mother %in% c(temp_data$IID1, temp_data$IID2)]
+      offspring_to_remove <- worker_pedigree$id[worker_pedigree$mother %in% removed_queen]
+      worker_pedigree <- worker_pedigree[!worker_pedigree$id %in% offspring_to_remove,]
+      temp_data <- temp_data[!temp_data$IID1 %in% offspring_to_remove,]
+      temp_data <- temp_data[!temp_data$IID1 %in% offspring_to_remove,]
+      worker_ids <- unique(worker_pedigree$id)
+
       # Filter for Worker (IID1) and Queen/Drone (IID2) relationships
       filtered_WD <- temp_data[temp_data$KINSHIP >= 0.2 & 
                                  temp_data$IBS0 < 0.005 & 
