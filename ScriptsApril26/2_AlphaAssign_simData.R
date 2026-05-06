@@ -131,6 +131,7 @@ Dpc_known <- data.frame(id = unique(pedigree_file$dpc),
                         sire = rep(NA, length(unique(pedigree_file$dpc))))
 
 True_pedigree <- rbind(Mothers_known, Dpc_known, Worker_known)
+dir.create(paste0(repDir, "/Data/AlphaAssign"), showWarnings = FALSE)
 write.table(True_pedigree, file = paste0("Data/AlphaAssign/SimData_TruePedigree.csv"), sep = ",", quote = F, col.names = T, row.names = F)
 
 
@@ -212,8 +213,7 @@ for (method in c("NoGE", "WithGE")) {
     print(method)
     print(n)
 
-    system(paste0("conda run -n AlphaAssign ", 
-    "AlphaAssign -genotypes ", repDir, "/Data/AlphaAssign/AlphaGeno_SNP", n, "_", method, ".txt ",
+    system(paste0("AlphaAssign -genotypes ", repDir, "/Data/AlphaAssign/AlphaGeno_SNP", n, "_", method, ".txt ",
     "-potentialsires ", repDir, "/Data/AlphaAssign/SimData_PotentialFathers_", method, "SNP_", n, ".list ", 
     "-pedigree ", repDir, "/Data/AlphaAssign/SimData_Pedigree_", method, "_SNP", n, ".txt ", 
     "-out ", repDir, "/Outputs/AlphaAssign/AlphaGeno_SNP", n, "_", method, " -runtype likelihood"))
