@@ -41,17 +41,28 @@ check_king <- function(KING_file, pedigree){
 
 # •• No GE ••
 dir.create("Outputs/KING", showWarnings = F)
+timing <- data.frame()
 
 for (n in 1:5){ 
   print("NoGE_SNP", n)
+  start = Sys.time()
   system(paste0(pathToPlink,"/plink2 --bfile Data/Sim_NoGE/SNP_",n,"_NoGE_QC --make-king-table --out Outputs/KING/NoGE_SNP",n,"_KINGoutput"))
+  end = Sys.time()
+  timing <- rbind(timing, c(method = "NoGE", n = n, Software = "KING", Rep = Rep, time = as.numeric(as.difftime(end-start, units = "s"))))
+
 }
 
 # •• With GE ••
 for (n in 1:5){ 
-  print("SNP", n)
+  print("WithGE_SNP", n)
+  start = Sys.time()
   system(paste0(pathToPlink,"/plink2 --bfile Data/Sim_WithGE/SNP_",n,"_WithGE_QC --make-king-table --out Outputs/KING/WithGE_SNP",n,"_KINGoutput"))
+  end = Sys.time()
+  timing <- rbind(timing, c(method = "WithGE", n = n, Software = "KING", Rep = Rep, time = as.numeric(as.difftime(end-start, units = "s"))))
 }
+
+colnames(timing) <- c("Method", "SNP_group", "Software", "Rep", "Time")
+write.csv(timing, paste0(repDir, "/Outputs/KING/Timing.csv"), quote=F, row.names=F)
 
 tests <- c("NoGE", "WithGE")
 snp_range <- 1:5 
@@ -78,6 +89,8 @@ for (t in tests) {
     file_name <- paste0(t, "_SNP", s, "_KINGoutput.kin0")
     
     if (file.exists(file_name)) {
+      worker_pedigree <- read.csv(paste0(repDir, "/Data/worker_pedigree.csv"))
+
       # Read the data
       temp_data <- read.table(file_name, header = FALSE)
 
