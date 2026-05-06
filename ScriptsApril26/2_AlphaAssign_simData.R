@@ -208,17 +208,30 @@ dir.create("Outputs/AlphaAssign", showWarnings = FALSE)
 
 print("Running AlphaAssign")
 
+timing = data.frame()
+
 for (method in c("NoGE", "WithGE")) {
   for (n in 1:5){
     print(method)
     print(n)
-
-    system(paste0("AlphaAssign -genotypes ", repDir, "/Data/AlphaAssign/AlphaGeno_SNP", n, "_", method, ".txt ",
-    "-potentialsires ", repDir, "/Data/AlphaAssign/SimData_PotentialFathers_", method, "SNP_", n, ".list ", 
-    "-pedigree ", repDir, "/Data/AlphaAssign/SimData_Pedigree_", method, "_SNP", n, ".txt ", 
-    "-out ", repDir, "/Outputs/AlphaAssign/AlphaGeno_SNP", n, "_", method, " -runtype likelihood"))
+    cmd <- paste(
+      "AlphaAssign",
+      "-genotypes", paste0(repDir, "/Data/AlphaAssign/AlphaGeno_SNP", n, "_", method, ".txt"),
+      "-potentialsires", paste0(repDir, "/Data/AlphaAssign/SimData_PotentialFathers_", method, "SNP_", n, ".list"),
+      "-pedigree", paste0(repDir, "/Data/AlphaAssign/SimData_Pedigree_", method, "_SNP", n, ".txt"),
+      "-out", paste0(repDir, "/Outputs/AlphaAssign/AlphaGeno_SNP", n, "_", method),
+      "-runtype likelihood"
+    )
+    
+    start = Sys.time()
+    system(cmd)
+    end = Sys.time()
+    timing <- rbind(timing, c(method = method, n = n, Software = "AlphaAssign", Rep = Rep, time = as.numeric(as.difftime(end-start, units = "s"))))
   }
 }
+
+colnames(timing) <- c("Method", "SNP_group", "Software", "Rep", "Time")
+write.csv(timing, "Outputs/AlphaAssign/Timing.csv", quote=F, row.names=F)
 
 print("Done running AlphaAssign")
 

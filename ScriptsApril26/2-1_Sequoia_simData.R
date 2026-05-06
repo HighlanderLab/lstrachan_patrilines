@@ -30,6 +30,7 @@ setwd(repDir)
 setwd(repDir)
 dir.create("Data/Sequoia", showWarnings = FALSE)
 dir.create("Outputs/Sequoia", showWarnings = FALSE)
+timing = data.frame()
 
 for (n in 1:5){ 
   for (method in c("NoGE", "WithGE")) {
@@ -91,12 +92,18 @@ for (n in 1:5){
 
     print("Run sequoia")
     setwd(repDir)
+    start = Sys.time()
     SequoiaOutPut <- sequoia(GenoM = AlphaGeno, LifeHistData = LifeHistory, Module = "ped", Plot = TRUE)
+    end = Sys.time()
     save(SequoiaOutPut, file = paste0("Outputs/Sequoia/SNP", n, "_", method, ".Rdata"))
+
+    timing <- rbind(timing, c(method = method, n = n, Software = "Sequoia", Rep = Rep, time = as.numeric(as.difftime(end-start, units = "s"))))
 
 
   }
 }
+
+write.csv(timing, "Outputs/Sequoia/Timing.csv", quote=F, row.names=F)
 
 #****** 3. SUMMARISE OUTPUTS *******************************************************
 setwd(repDir)
