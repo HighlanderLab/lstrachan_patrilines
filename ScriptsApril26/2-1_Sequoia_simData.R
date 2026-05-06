@@ -39,10 +39,7 @@ for (n in 1:5){
 
     # Read in genotypes
     AlphaPed <- read.table(paste0(repDir, "/Data/Sim_", method, "/SNP_",n,"_", method, "_QC_RecodeA.raw"), header=TRUE)
-    AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]
-    AlphaGeno[AlphaGeno == 9] <- NA
-    AlphaGeno <- as.matrix(AlphaGeno)
-    rownames(AlphaGeno) <- AlphaPed$IID
+
 
     #Setting up the input files 
     # *************** LIFE HISTORY ********************************
@@ -50,6 +47,13 @@ for (n in 1:5){
     pedigree_file <- pedigree_file[pedigree_file$id %in% AlphaPed$IID,]
     pedigree_file <- pedigree_file[pedigree_file$mother %in% AlphaPed$IID,]
     pedigree_file <- pedigree_file[pedigree_file$dpc %in% AlphaPed$IID,]
+
+    AlphaPed <- AlphaPed[AlphaPed$IID %in% c(pedigree_file$id, pedigree_file$dpc, pedigree_file$mother),]
+    AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]
+    AlphaGeno[AlphaGeno == 9] <- NA
+    AlphaGeno <- as.matrix(AlphaGeno)
+    rownames(AlphaGeno) <- AlphaPed$IID
+
 
     #Life History - need ID, Sex, BirthYear in a csv file 
     Workers <- data.frame(ID = pedigree_file$id,

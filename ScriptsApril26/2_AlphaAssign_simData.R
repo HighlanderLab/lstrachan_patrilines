@@ -146,11 +146,6 @@ for (method in c("NoGE", "WithGE")) {
     ped_to_raw(ped_file = paste0("SNP_",n,"_", method, "_QC.ped"), map_file = paste0("SNP_",n,"_", method, "_QC.map"), output_file = paste0("SNP_",n,"_", method, "_QC_RecodeA.raw"))
 
     AlphaPed <- read.table(paste0("SNP_",n,"_", method, "_QC_RecodeA.raw"), header=TRUE)
-    AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
-    AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
-    
-    write.table(AlphaGeno_id, file=paste0(repDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_", method, ".txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
-  
 
     # Do all this within the loop since some queens and DPCs get removed in the QC
     # If a queen is removed, remove her offspring
@@ -158,6 +153,13 @@ for (method in c("NoGE", "WithGE")) {
     pedigree_file <- pedigree_file[pedigree_file$id %in% AlphaPed$IID,]
     pedigree_file <- pedigree_file[pedigree_file$mother %in% AlphaPed$IID,]
     pedigree_file <- pedigree_file[pedigree_file$dpc %in% AlphaPed$IID,]
+
+    AlphaPed <- AlphaPed[AlphaPed$IID %in% c(pedigree_file$id, pedigree_file$dpc, pedigree_file$mother),]
+    AlphaGeno <- AlphaPed[,7:ncol(AlphaPed)]; AlphaGeno[is.na(AlphaGeno)] <- 9
+    AlphaGeno_id <- cbind(AlphaPed$IID, AlphaGeno)
+    
+    write.table(AlphaGeno_id, file=paste0(repDir, "Data/AlphaAssign/AlphaGeno_SNP",n,"_", method, ".txt"), sep=" ", quote=FALSE, col.names=FALSE, row.names=FALSE) 
+  
 
     no_individuals_methods[[n]] <- c("NoDams" = length(unique(pedigree_file$mother)),
                                      "NoDpc" = length(unique(pedigree_file$dpc)),
