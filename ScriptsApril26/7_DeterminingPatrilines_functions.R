@@ -1,5 +1,4 @@
-
-calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father_haplotypes, father_test_threshold, recon_pedigree,data_type= NULL, haplo_assignment_type= NULL) {
+ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father_haplotypes, father_test_threshold, recon_pedigree,data_type= NULL, haplo_assignment_type= NULL) {
   
   # Extract paternal haplotypes
   results_paternal <- rownames(results)[grep(paste0("_paternal"), rownames(results))]
@@ -7,6 +6,9 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
   
   # Create a loop grouping together sisters using pedigree 
   queen_ids <- unique(pedigree$mother)
+
+  # Save worker assignments
+  worker_assignments <- data.frame()
   
   # Initialize a data frame to store the results
   nPaternity <- data.frame(queen_id = queen_ids, 
@@ -24,13 +26,11 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
                            stringsAsFactors = FALSE)
   
   for (i in 1:length(queen_ids)) {
-    print(i)
     queen_id <- queen_ids[i]
     sister_worker_ids <- t(pedigree[pedigree$mother == queen_id, "id"])
     nPaternity$num_workers_actual[i]  <- length(pedigree[pedigree$mother == queen_id, "id"])
-    num_dpqs_actual <- pedigree[pedigree$mother == queen_id,]
-    
-    nPaternity$num_dpqs_actual[i] <- length(unique(num_dpqs_actual$dpc))
+    nPaternity$num_dpqs_actual[i] <- length(unique(pedigree$dpc[pedigree$mother == queen_id]))
+    #nPaternity$num_dpqs_recon_ped[i] <- length(unique(recon_pedigree$sire[recon_pedigree$dam == queen_id]))
     
     # Check if recon_pedigree is missing, null, or the string "NA"
     if (is.null(recon_pedigree) || (length(recon_pedigree) == 1 && is.na(recon_pedigree))) {
@@ -38,8 +38,8 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
       nPaternity$num_workers_recon[i] <- NA
     } else {
       # It is a dataframe, proceed with filtering
-      matches <- recon_pedigree[recon_pedigree$mother == queen_id, ]
-      nPaternity$num_dpqs_recon_ped[i] <- length(unique(matches$dpc))
+      matches <- recon_pedigree[recon_pedigree$dam == queen_id, ]
+      nPaternity$num_dpqs_recon_ped[i] <- length(unique(matches$sire))
       nPaternity$num_workers_recon[i] <- length(unique(matches$id))
     }
     
@@ -175,6 +175,44 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
     
     # Combine father groups and new groups
     father_groups <- c(father_groups, new_groups)
+
+    # Create worker-level assignment table
+    for (group_name in names(father_groups)) {
+      workers <- father_groups[[group_name]]
+
+      for (worker in workers) {
+        worker_id <- sub("_paternal$", "", worker)
+        assigned_father_id <- gsub("_paternal$", "", group_name)
+        SPpedigree = as.data.frame(SP$pedigree)
+        if (is.null(assigned_father_id) | startsWith(assigned_father_id, "group")) {
+          assigned_dpq <- NA
+        } else {
+          assigned_dpq <- SPpedigree$mother[rownames(SPpedigree) == assigned_father_id]
+        }
+        if (!is.null(recon_pedigree)) {
+          recon_dpq <- recon_pedigree$sire[recon_pedigree$id == worker_id]
+        } else  {
+          recon_dpq <- NA
+        }
+        
+        actual_father <- pedigree$father[pedigree$id == worker_id]
+        actual_dpq <- pedigree$dpc[pedigree$id == worker_id]
+
+        worker_assignments <- rbind(
+          worker_assignments,
+          data.frame(
+            queen_id = queen_id,
+            worker_id = worker_id,
+            actual_father = actual_father,
+            actual_dpq = actual_dpq,
+            assigned_father = assigned_father_id,
+            assigned_dpq = assigned_dpq,
+            recon_dpq = recon_dpq,
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+    }
     
     # Store the number of estimated fathers
     nPaternity$num_fathers_estimated[i] <- length(father_groups)
@@ -184,8 +222,11 @@ calc_nPaternity_Accuracy <- function(results, sister_threshold, pedigree, father
     nPaternity$num_fathers_correct[i] <- length(correct_fathers)
   }
   
-  return(nPaternity)
-}
+  return(list(
+  nPaternity = nPaternity,
+  worker_assignments = worker_assignments
+))
+ }
 
 run_paternity_tests <- function(results_arg, sister_thresholds, father_test_thresholds, father_haplotypes, pedigree, recon_pedigree, data_type= NULL, haplo_assignment_type= NULL) {
   
@@ -222,6 +263,7 @@ run_paternity_tests <- function(results_arg, sister_thresholds, father_test_thre
   
   return(results_list)
 }
+
 
 plot_paternity_number_grid_DRONES <- function(Results) {
   
@@ -333,15 +375,16 @@ SisterONLY_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedig
                              data_type = data_type,
                              haplo_assignment_type = haplo_assignment_type)
   }
+
+  worker_assignments <- data.frame()
   
   for (i in 1:length(queen_ids)) {
     print(i)
     queen_id <- queen_ids[i]
     sister_worker_ids <- t(pedigree[pedigree$mother == queen_id, "id"])
     if (simulated == TRUE){
-      nPaternity$num_workers_actual[i]  <- nrow(pedigree[pedigree$mother == queen_id, "id"])    
-      }
-    if (simulated == FALSE){
+      nPaternity$num_workers_actual[i]  <- length(pedigree[pedigree$mother == queen_id, "id"])    
+      } else if (simulated == FALSE){
     nPaternity$num_workers_actual[i]  <- length(sister_worker_ids)
      }
     
@@ -358,8 +401,8 @@ SisterONLY_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedig
       nPaternity$num_workers_recon[i] <- NA
     } else {
       # It is a dataframe, proceed with filtering
-      matches <- recon_pedigree[recon_pedigree$mother == queen_id, ]
-      nPaternity$num_dpqs_recon_ped[i] <- length(unique(matches$dpc))
+      matches <- recon_pedigree[recon_pedigree$dam == queen_id, ]
+      nPaternity$num_dpqs_recon_ped[i] <- length(unique(matches$sire))
       nPaternity$num_workers_recon[i] <- length(unique(matches$id))
     }
     
@@ -423,11 +466,51 @@ SisterONLY_calc_nPaternity_Accuracy <- function(results, sister_threshold, pedig
       sister_groups[[new_group_name]] <- c(worker)
     }
     
+    if (simulated) {
+    # Create worker-level assignment table
+    for (group_name in names(sister_groups)) {
+      workers <- sister_groups[[group_name]]
+
+      for (worker in workers) {
+        worker_id <- sub("_paternal$", "", worker)
+        if (simulated == TRUE) {
+          SPpedigree = as.data.frame(SP$pedigree)
+          actual_father <- SPpedigree$father[rownames(SPpedigree) == worker_id]
+          actual_dpq <- SPpedigree$mother[rownames(SPpedigree) == actual_father]
+        } else {
+          actual_father <- NA
+          actual_dpq <- NA
+        }
+
+        if (!is.null(recon_pedigree)) {
+          recon_dpq <- recon_pedigree$sire[recon_pedigree$id == worker_id]
+        } else  {
+          recon_dpq <- NA
+        }
+
+        worker_assignments <- rbind(
+          worker_assignments,
+          data.frame(
+            queen_id = queen_id,
+            worker_id = worker_id,
+            sister_group = group_name,
+            actual_father = actual_father,
+            actual_dpq = actual_dpq,
+            recon_dpq = recon_dpq,
+            stringsAsFactors = FALSE
+          )
+        )
+      }
+    }
+    } else {
+      worker_assignments <- NA
+    }
+
     # Store the number of estimated sister groups (clusters)
     nPaternity$num_sister_groups_estimated[i] <- length(sister_groups)
   }
   
-  return(nPaternity)
+  return(list(nPaternity = nPaternity, worker_assignments = worker_assignments))
 }
 
 run_sister_clustering_tests <- function(results_arg, sister_thresholds, pedigree, recon_pedigree, simulated = NULL, data_type= NULL, haplo_assignment_type= NULL) {

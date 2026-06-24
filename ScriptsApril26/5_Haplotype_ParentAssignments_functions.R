@@ -477,6 +477,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
           stop("None of the if statements are true, something is wrong with the logic")
         }
 
+        #Case 1: One score is an absolute max
         #Only 1 is the absolute clear parent 
         {
         if (max_diff == abs(score_1) & max_diff != abs(score_2) & max_diff != abs(score_3) & max_diff != abs(score_4)) {
@@ -500,6 +501,7 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, maternal = TRUE, offspring_id = offspring_id)
         }
         
+        # Case 2: one haplotype matches equally with both parents, both have a max score  
         #Two on the same haplotype have equally high scores, use the other haplotype to work it out 
         else if (max_diff == abs(score_4) & max_diff == abs(score_3) &  abs(score_1) > abs(score_2))  {
           #message("Hap2 is maternal - assume Hap1 is paternal")
@@ -521,6 +523,8 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
+          
+        # Case 3: each haplotype matches best with one parent  
         else if (max_diff == abs(score_1) & max_diff == abs(score_4) &  max_diff != abs(score_2) & max_diff != abs(score_3))  {
           #message("Hap1 is paternal and Hap2 is maternal - both are max")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, paternal = TRUE, offspring_id = offspring_id)
@@ -531,6 +535,8 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
+          
+        # Case 4: both haplotypes match better with one parent
         else if (max_diff == abs(score_1) & max_diff == abs(score_3) & abs(score_2) > abs(score_4)) {
           #message("Hap1 is maternal and Hap2 is paternal - both are max")
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
@@ -551,6 +557,8 @@ Route1_flipping <- function(Data_type = NULL, pedigree = NULL, perfect_haplotype
           Offspring_Hap1_chr <- assign_parent_haplo(Offspring_Hap1_chr, maternal = TRUE, offspring_id = offspring_id)
           Offspring_Hap2_chr <- assign_parent_haplo(Offspring_Hap2_chr, paternal = TRUE, offspring_id = offspring_id)
         }
+          
+        # Case 5: all values are equal
         else if (max_diff == abs(score_1) & max_diff == abs(score_2) &  max_diff == abs(score_3) & max_diff == abs(score_4))  {
           stop("All values are equal")
         } else {

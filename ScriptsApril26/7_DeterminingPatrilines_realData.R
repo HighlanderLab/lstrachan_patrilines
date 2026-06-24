@@ -26,8 +26,9 @@ pathToBeagle <- softwareDir
 
 # Set working directory
 setwd(paste0(workingDir, "/Real_data/"))
-
 source(paste0(workingDir, "/ScriptsApril26/7_DeterminingPatrilines_functions.R"))
+
+
 ################################################################################
 #******* ROUTE 1 *******************************
 ################################################################################
@@ -35,16 +36,15 @@ source(paste0(workingDir, "/ScriptsApril26/7_DeterminingPatrilines_functions.R")
 #Load the outputs of 7_Haplotype_ParentageAssignments script
 load("Pipeline/5_Haplotype_ParentAssignments.RData")
 
-sister_thresholds <- c(1.0, 0.95, 0.90, 0.85, 0.80, 0.75)
-father_test_thresholds <- c(1,0.95, 0.9)
+sister_thresholds <- c(1.0, 0.95, 0.90, 0.85, 0.75)
 
 #** ••• REAL ••• **
 
 colnames(Slov_pedigree_mat_filtered) <- c("id", "dpc", "mother")
-colnames(Slov_pedigree_rec_filter) <- c("id", "dpc", "mother")
+#colnames(Slov_pedigree_rec_filter) <- c("id", "dpc", "mother")
 
 #This is route 2 for determining patrilines with haplotypes coming from route 1 of everything before
-PatR2_Real_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_Real$results_flipped,
+PatSis_Real_Route1 <- run_sister_clustering_tests(results_arg = Route1_Real$results_flipped,
                                                  sister_thresholds = sister_thresholds,
                                                  pedigree = Slov_pedigree_mat_filtered,
                                                  recon_pedigree = Slov_pedigree_rec_filter,
@@ -53,7 +53,7 @@ PatR2_Real_Haplo1 <- run_sister_clustering_tests(results_arg = Route1_Real$resul
                                                  haplo_assignment_type = "Used recon pedigree")
 
 #This is route 2 for determining patrilines with haplotypes coming from route 2 of everything before
-PatR2_Real_Haplo2 <- run_sister_clustering_tests(results_arg = Route2_Real$phased_results_flipped,
+PatSis_Real_Route2 <- run_sister_clustering_tests(results_arg = Route2_Real$phased_results_flipped,
                                                  sister_thresholds = sister_thresholds,
                                                  pedigree = Slov_pedigree_mat_filtered,
                                                  recon_pedigree = NULL,
